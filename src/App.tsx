@@ -11,10 +11,10 @@ import {
   Timer as TimerIcon, 
   Sparkles, 
   Languages, 
-  Moon, 
-  Sun,
   Brain,
-  Settings
+  Settings,
+  Menu,
+  X
 } from 'lucide-react';
 import { Editor } from './components/Editor';
 import { SummarizerPanel } from './components/SummarizerPanel';
@@ -37,6 +37,7 @@ const tabs = [
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('editor');
   const [aiStatus, setAiStatus] = useState<'available' | 'unavailable' | 'checking'>('checking');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -71,13 +72,23 @@ function AppContent() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-card border-b px-6 py-4">
+      <header className="bg-card border-b px-4 md:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </Button>
+            
             <div className="p-2 bg-primary rounded-lg">
               <Brain className="text-primary-foreground" size={24} />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-foreground">
                 FocusFlow
               </h1>
@@ -87,9 +98,12 @@ function AppContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {/* AI Status */}
-            <Badge variant={aiStatus === 'available' ? 'default' : aiStatus === 'unavailable' ? 'destructive' : 'secondary'}>
+            <Badge 
+              variant={aiStatus === 'available' ? 'default' : aiStatus === 'unavailable' ? 'destructive' : 'secondary'}
+              className="hidden sm:inline-flex"
+            >
               {aiStatus === 'available' ? 'AI Ready' : 
                aiStatus === 'unavailable' ? 'AI Unavailable' : 'Checking AI...'}
             </Badge>
@@ -100,16 +114,33 @@ function AppContent() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
-        <nav className="w-64 bg-card border-r p-4">
+        <nav className={`
+          fixed md:relative z-50 md:z-auto
+          w-64 h-full md:h-auto
+          bg-card border-r p-4
+          transform transition-transform duration-200 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
           <div className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <Button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setSidebarOpen(false);
+                  }}
                   variant={activeTab === tab.id ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
                 >
@@ -143,7 +174,7 @@ function AppContent() {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-auto md:ml-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -151,7 +182,7 @@ function AppContent() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
-              className="h-full"
+              className="min-h-full"
             >
               {renderActiveComponent()}
             </motion.div>

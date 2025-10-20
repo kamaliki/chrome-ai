@@ -4,6 +4,8 @@ import { FileText, Lightbulb, Target, Loader2 } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
 import { getNotes } from '../utils/storage';
 import { Note } from '../types/chrome-ai';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const SummarizerPanel: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -53,21 +55,21 @@ export const SummarizerPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 bg-white dark:bg-gray-900 overflow-y-auto">
+    <div className="h-full flex flex-col p-6 bg-background overflow-y-auto">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        <h2 className="text-2xl font-bold text-foreground mb-4">
           AI Summarizer
         </h2>
         
         <div className="flex gap-2 mb-4">
-          <button
+          <Button
             onClick={summarizeAllNotes}
             disabled={isLoading || notes.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+            className="gap-2"
           >
             {isLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
             Summarize All Notes
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -76,19 +78,24 @@ export const SummarizerPanel: React.FC = () => {
               key={note.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                selectedNote?.id === note.id
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-              onClick={() => handleSummarize(note)}
             >
-              <div className="text-sm font-medium truncate mb-1">
-                {note.content.split('\n')[0] || 'Untitled'}
-              </div>
-              <div className="text-xs text-gray-500">
-                {new Date(note.updatedAt).toLocaleDateString()}
-              </div>
+              <Card 
+                className={`cursor-pointer transition-all ${
+                  selectedNote?.id === note.id
+                    ? 'border-primary bg-primary/5'
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => handleSummarize(note)}
+              >
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium truncate mb-1">
+                    {note.content.split('\n')[0] || 'Untitled'}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(note.updatedAt).toLocaleDateString()}
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           ))}
         </div>
@@ -101,13 +108,18 @@ export const SummarizerPanel: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <FileText size={20} className="text-blue-500" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Summary</h3>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{summary}</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText size={20} className="text-primary" />
+                    Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground leading-relaxed">{summary}</p>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
@@ -116,13 +128,18 @@ export const SummarizerPanel: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <Lightbulb size={20} className="text-yellow-500" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Key Insights</h3>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{insights}</p>
+              <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-800 dark:bg-yellow-900/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb size={20} className="text-yellow-600 dark:text-yellow-400" />
+                    Key Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground leading-relaxed">{insights}</p>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
 
@@ -131,13 +148,18 @@ export const SummarizerPanel: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <Target size={20} className="text-green-500" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Next Actions</h3>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{actions}</p>
+              <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target size={20} className="text-green-600 dark:text-green-400" />
+                    Next Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground leading-relaxed">{actions}</p>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
         </div>

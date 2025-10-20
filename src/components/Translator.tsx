@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Languages, ArrowRight, Copy, Check } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -45,17 +48,17 @@ export const Translator: React.FC = () => {
   };
 
   return (
-    <div className="h-full p-6 bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-green-900">
+    <div className="h-full p-6 bg-background">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-4xl mx-auto"
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-3xl font-bold text-foreground mb-2">
             AI Translator
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Translate text instantly with Chrome's built-in AI
           </p>
         </div>
@@ -63,17 +66,17 @@ export const Translator: React.FC = () => {
         {/* Language Selector */}
         <div className="flex items-center justify-center gap-4 mb-6">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-foreground">
               Auto-detect
             </span>
           </div>
           
-          <ArrowRight className="text-gray-400" size={20} />
+          <ArrowRight className="text-muted-foreground" size={20} />
           
           <select
             value={targetLanguage}
             onChange={(e) => setTargetLanguage(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="px-4 py-2 border border-input rounded-lg bg-background text-foreground"
           >
             {languages.map((lang) => (
               <option key={lang.code} value={lang.code}>
@@ -86,107 +89,113 @@ export const Translator: React.FC = () => {
         {/* Translation Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Input */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Languages className="text-blue-500" size={20} />
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Languages className="text-primary" size={20} />
                 Original Text
-              </h3>
-            </div>
-            
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Enter text to translate..."
-              className="w-full h-64 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {inputText.length} characters
-              </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Enter text to translate..."
+                className="h-64 resize-none"
+              />
               
-              <button
-                onClick={handleTranslate}
-                disabled={isLoading || !inputText.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
-                <Languages size={16} />
-                {isLoading ? 'Translating...' : 'Translate'}
-              </button>
-            </div>
-          </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  {inputText.length} characters
+                </span>
+                
+                <Button
+                  onClick={handleTranslate}
+                  disabled={isLoading || !inputText.trim()}
+                  className="gap-2"
+                >
+                  <Languages size={16} />
+                  {isLoading ? 'Translating...' : 'Translate'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Output */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Languages className="text-green-500" size={20} />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Languages className="text-green-600 dark:text-green-400" size={20} />
                   Translation
-                </h3>
+                </div>
+                
+                {outputText && (
+                  <Button
+                    onClick={handleCopy}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied ? 'Copied!' : 'Copy'}
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="w-full h-64 p-4 border rounded-lg bg-muted/50 overflow-y-auto">
+                {outputText ? (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="leading-relaxed text-foreground"
+                  >
+                    {outputText}
+                  </motion.p>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    Translation will appear here...
+                  </p>
+                )}
               </div>
               
               {outputText && (
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
+                <div className="text-sm text-muted-foreground">
+                  Translated to {languages.find(l => l.code === targetLanguage)?.name}
+                </div>
               )}
-            </div>
-            
-            <div className="w-full h-64 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 overflow-y-auto">
-              {outputText ? (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="leading-relaxed"
-                >
-                  {outputText}
-                </motion.p>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 italic">
-                  Translation will appear here...
-                </p>
-              )}
-            </div>
-            
-            {outputText && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Translated to {languages.find(l => l.code === targetLanguage)?.name}
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Tip: Press Ctrl+Enter to translate quickly
           </p>
           
           <div className="flex justify-center gap-2">
-            <button
+            <Button
               onClick={() => setInputText('')}
-              className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              variant="outline"
+              size="sm"
             >
               Clear Input
-            </button>
+            </Button>
             
-            <button
+            <Button
               onClick={() => {
                 setInputText(outputText);
                 setOutputText('');
               }}
               disabled={!outputText}
-              className="px-4 py-2 text-sm bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors disabled:opacity-50"
+              variant="secondary"
+              size="sm"
             >
               Swap Languages
-            </button>
+            </Button>
           </div>
         </div>
       </motion.div>

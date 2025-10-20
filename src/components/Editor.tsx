@@ -4,6 +4,9 @@ import { Save, Edit3, Languages, Sparkles } from 'lucide-react';
 import { Note } from '../types/chrome-ai';
 import { saveNote, getNotes } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -73,15 +76,15 @@ export const Editor: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-screen">
       {/* Notes Sidebar */}
-      <div className="w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
-        <button
+      <div className="w-64 h-full bg-muted/50 border-r p-4 overflow-y-auto">
+        <Button
           onClick={createNewNote}
-          className="w-full mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="w-full mb-4"
         >
           New Note
-        </button>
+        </Button>
         
         <div className="space-y-2">
           {notes.map((note) => (
@@ -89,70 +92,78 @@ export const Editor: React.FC = () => {
               key={note.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                currentNote?.id === note.id
-                  ? 'bg-blue-100 dark:bg-blue-900'
-                  : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-              }`}
-              onClick={() => {
-                setCurrentNote(note);
-                setContent(note.content);
-              }}
             >
-              <div className="text-sm font-medium truncate">
-                {note.content.split('\n')[0] || 'Untitled'}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {new Date(note.updatedAt).toLocaleDateString()}
-              </div>
+              <Card 
+                className={`cursor-pointer transition-colors ${
+                  currentNote?.id === note.id
+                    ? 'bg-primary/10 border-primary'
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => {
+                  setCurrentNote(note);
+                  setContent(note.content);
+                }}
+              >
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium truncate">
+                    {note.content.split('\n')[0] || 'Untitled'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {new Date(note.updatedAt).toLocaleDateString()}
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           ))}
         </div>
       </div>
 
       {/* Editor */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 h-full flex flex-col">
         {/* Toolbar */}
-        <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center gap-2">
-          <button
+        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0">
+          <Button
             onClick={handleSave}
-            className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            variant="default"
+            className="gap-2"
           >
             <Save size={16} />
             Save
-          </button>
+          </Button>
           
           {selectedText && (
             <>
-              <button
+              <Button
                 onClick={handleRewrite}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+                variant="secondary"
+                className="gap-2"
               >
                 <Sparkles size={16} />
                 Rewrite
-              </button>
+              </Button>
               
-              <button
+              <Button
                 onClick={handleTranslate}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+                variant="outline"
+                className="gap-2"
               >
                 <Languages size={16} />
                 Translate
-              </button>
+              </Button>
             </>
           )}
         </div>
 
         {/* Text Area */}
-        <textarea
+        <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onMouseUp={handleTextSelection}
           onKeyUp={handleTextSelection}
           placeholder="Start writing your thoughts..."
-          className="flex-1 p-6 resize-none border-none outline-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-lg leading-relaxed"
+          className="flex-1 resize-none border-none text-lg leading-relaxed"
           style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
         />
       </div>

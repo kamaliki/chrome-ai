@@ -5,6 +5,9 @@ import { useTimer } from '../hooks/useTimer';
 import { useAI } from '../hooks/useAI';
 import { getSessions } from '../utils/storage';
 import { TimerSession } from '../types/chrome-ai';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const Timer: React.FC = () => {
   const [sessions, setSessions] = useState<TimerSession[]>([]);
@@ -49,16 +52,16 @@ export const Timer: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-full flex flex-col items-center justify-center p-4 md:p-8 bg-background overflow-auto">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="text-center mb-8"
       >
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <h2 className="text-3xl font-bold text-foreground mb-2">
           Focus Timer
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground">
           Stay focused with the Pomodoro technique
         </p>
       </motion.div>
@@ -73,7 +76,7 @@ export const Timer: React.FC = () => {
             stroke="currentColor"
             strokeWidth="2"
             fill="none"
-            className="text-gray-200 dark:text-gray-700"
+            className="text-muted"
           />
           <motion.circle
             cx="50"
@@ -83,7 +86,7 @@ export const Timer: React.FC = () => {
             strokeWidth="2"
             fill="none"
             strokeLinecap="round"
-            className="text-blue-500"
+            className="text-primary"
             style={{
               strokeDasharray: `${2 * Math.PI * 45}`,
               strokeDashoffset: `${2 * Math.PI * 45 * (1 - progress / 100)}`,
@@ -96,10 +99,10 @@ export const Timer: React.FC = () => {
         
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-4xl font-mono font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-4xl font-mono font-bold text-foreground">
               {formatTime()}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-sm text-muted-foreground mt-1">
               {isCompleted ? 'Completed!' : isRunning ? 'Focus Time' : 'Ready to Start'}
             </div>
           </div>
@@ -109,39 +112,41 @@ export const Timer: React.FC = () => {
       {/* Controls */}
       <div className="flex items-center gap-4 mb-8">
         {!isRunning ? (
-          <button
+          <Button
             onClick={start}
-            className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+            className="gap-2 rounded-full"
           >
             <Play size={20} />
             Start
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             onClick={pause}
-            className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-white rounded-full hover:bg-yellow-600 transition-colors"
+            variant="secondary"
+            className="gap-2 rounded-full"
           >
             <Pause size={20} />
             Pause
-          </button>
+          </Button>
         )}
         
-        <button
+        <Button
           onClick={reset}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors"
+          variant="outline"
+          className="gap-2 rounded-full"
         >
           <RotateCcw size={20} />
           Reset
-        </button>
+        </Button>
 
         {isCompleted && (
-          <button
+          <Button
             onClick={handleComplete}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+            className="gap-2 rounded-full"
           >
             <CheckCircle size={20} />
             Complete
-          </button>
+          </Button>
         )}
       </div>
 
@@ -152,11 +157,11 @@ export const Timer: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md mb-6"
         >
-          <textarea
+          <Textarea
             value={sessionNotes}
             onChange={(e) => setSessionNotes(e.target.value)}
             placeholder="Add notes about this session..."
-            className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+            className="resize-none"
             rows={3}
           />
         </motion.div>
@@ -164,27 +169,28 @@ export const Timer: React.FC = () => {
 
       {/* Today's Progress */}
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-2 mb-3">
-          <Clock size={20} className="text-blue-500" />
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-            Today's Progress
-          </h3>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-          <div className="text-2xl font-bold text-blue-500 mb-1">
-            {todaySessions.length}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Sessions completed
-          </div>
-          
-          {todaySessions.length > 0 && (
-            <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-              Total focus time: {Math.round(todaySessions.reduce((acc, s) => acc + s.duration, 0) / 60)} minutes
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock size={20} className="text-primary" />
+              Today's Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary mb-1">
+              {todaySessions.length}
             </div>
-          )}
-        </div>
+            <div className="text-sm text-muted-foreground">
+              Sessions completed
+            </div>
+            
+            {todaySessions.length > 0 && (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Total focus time: {Math.round(todaySessions.reduce((acc, s) => acc + s.duration, 0) / 60)} minutes
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
