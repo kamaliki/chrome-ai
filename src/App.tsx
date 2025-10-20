@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeProvider } from "@/components/theme-provider"
+import { ModeToggle } from "@/components/mode-toggle"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 import { 
   Edit3, 
@@ -30,9 +34,8 @@ const tabs = [
   { id: 'translator', label: 'Translator', icon: Languages },
 ] as const;
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('editor');
-  const [isDark, setIsDark] = useState(false);
   const [aiStatus, setAiStatus] = useState<'available' | 'unavailable' | 'checking'>('checking');
 
   useEffect(() => {
@@ -43,24 +46,9 @@ function App() {
     // Initialize database
     await initDB();
     
-    // Check theme preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldUseDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    setIsDark(shouldUseDark);
-    document.documentElement.classList.toggle('dark', shouldUseDark);
-    
     // Check AI availability
     const aiAvailable = await isAIAvailable();
     setAiStatus(aiAvailable ? 'available' : 'unavailable');
-  };
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
   };
 
   const renderActiveComponent = () => {
@@ -81,19 +69,19 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <header className="bg-card border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500 rounded-lg">
-              <Brain className="text-white" size={24} />
+            <div className="p-2 bg-primary rounded-lg">
+              <Brain className="text-primary-foreground" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-xl font-bold text-foreground">
                 FocusFlow
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Privacy-first AI productivity assistant
               </p>
             </div>
@@ -101,47 +89,33 @@ function App() {
 
           <div className="flex items-center gap-4">
             {/* AI Status */}
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${
-                aiStatus === 'available' ? 'bg-green-500' : 
-                aiStatus === 'unavailable' ? 'bg-red-500' : 'bg-yellow-500'
-              }`} />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {aiStatus === 'available' ? 'AI Ready' : 
-                 aiStatus === 'unavailable' ? 'AI Unavailable' : 'Checking AI...'}
-              </span>
-            </div>
+            <Badge variant={aiStatus === 'available' ? 'default' : aiStatus === 'unavailable' ? 'destructive' : 'secondary'}>
+              {aiStatus === 'available' ? 'AI Ready' : 
+               aiStatus === 'unavailable' ? 'AI Unavailable' : 'Checking AI...'}
+            </Badge>
 
             {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            <ModeToggle />
           </div>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <nav className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
+        <nav className="w-64 bg-card border-r p-4">
           <div className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
-                <button
+                <Button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-blue-500 text-white shadow-sm'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                  variant={activeTab === tab.id ? 'default' : 'ghost'}
+                  className="w-full justify-start gap-3"
                 >
                   <Icon size={20} />
                   <span className="font-medium">{tab.label}</span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -151,15 +125,15 @@ function App() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+              className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg"
             >
               <div className="flex items-start gap-2">
-                <Settings className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={16} />
+                <Settings className="text-destructive mt-0.5" size={16} />
                 <div>
-                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  <p className="text-sm font-medium text-destructive">
                     Chrome AI Unavailable
                   </p>
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Enable Chrome's built-in AI features for full functionality.
                   </p>
                 </div>
@@ -185,6 +159,14 @@ function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

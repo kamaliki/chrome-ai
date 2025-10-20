@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw, Heart, Target, Lightbulb } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const promptTypes = [
   { id: 'focus', label: 'Focus Question', icon: Target, color: 'blue' },
@@ -37,17 +40,17 @@ export const PromptGenerator: React.FC = () => {
   };
 
   return (
-    <div className="h-full p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900">
+    <div className="h-full p-6 bg-background">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl mx-auto"
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-3xl font-bold text-foreground mb-2">
             Daily Prompt Generator
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             AI-powered prompts to inspire your day
           </p>
         </div>
@@ -57,18 +60,15 @@ export const PromptGenerator: React.FC = () => {
           {promptTypes.map((type) => {
             const Icon = type.icon;
             return (
-              <button
+              <Button
                 key={type.id}
                 onClick={() => setSelectedType(type.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
-                  selectedType === type.id
-                    ? `bg-${type.color}-500 text-white`
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                variant={selectedType === type.id ? 'default' : 'outline'}
+                className="gap-2"
               >
                 <Icon size={16} />
                 {type.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -78,48 +78,54 @@ export const PromptGenerator: React.FC = () => {
           key={currentPrompt}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg mb-6"
         >
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
-              <Sparkles className="text-purple-600 dark:text-purple-400" size={24} />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                Today's {promptTypes.find(t => t.id === selectedType)?.label}
-              </h3>
-              <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Sparkles className="text-primary" size={24} />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">
+                    Today's {promptTypes.find(t => t.id === selectedType)?.label}
+                  </CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg text-foreground leading-relaxed">
                 {currentPrompt || 'Generating your personalized prompt...'}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Actions */}
         <div className="flex justify-center gap-4 mb-8">
-          <button
+          <Button
             onClick={generateDailyPrompt}
             disabled={isLoading}
-            className="flex items-center gap-2 px-6 py-3 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors disabled:opacity-50"
+            className="gap-2"
           >
             <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
             Generate New
-          </button>
+          </Button>
           
-          <button
+          <Button
             onClick={savePrompt}
             disabled={!currentPrompt}
-            className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors disabled:opacity-50"
+            variant="secondary"
+            className="gap-2"
           >
             <Heart size={20} />
             Save Prompt
-          </button>
+          </Button>
         </div>
 
         {/* Saved Prompts */}
         {dailyPrompts.length > 0 && (
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="font-semibold text-foreground mb-4">
               Saved Prompts
             </h3>
             <div className="space-y-3">
@@ -129,9 +135,12 @@ export const PromptGenerator: React.FC = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm"
                 >
-                  <p className="text-gray-700 dark:text-gray-300">{prompt}</p>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-foreground">{prompt}</p>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </div>
