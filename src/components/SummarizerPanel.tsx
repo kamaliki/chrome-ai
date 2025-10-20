@@ -53,7 +53,7 @@ export const SummarizerPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col p-6 bg-white dark:bg-gray-900 overflow-y-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
           AI Summarizer
