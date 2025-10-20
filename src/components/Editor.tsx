@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Edit3, Languages, Sparkles } from 'lucide-react';
+import { Save, Languages, Sparkles } from 'lucide-react';
 import { Note } from '../types/chrome-ai';
 import { saveNote, getNotes } from '../utils/storage';
 import { useAI } from '../hooks/useAI';

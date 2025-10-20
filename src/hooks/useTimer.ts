@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { TimerSession } from '../types/chrome-ai';
 import { saveSession } from '../utils/storage';
 
-export const useTimer = (initialDuration = 25 * 60) => {
+export const useTimer = (initialDuration = 1 * 60) => {
   const [timeLeft, setTimeLeft] = useState(initialDuration);
   const [isRunning, setIsRunning] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
