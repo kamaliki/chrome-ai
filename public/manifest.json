@@ -1,0 +1,17 @@
+{
+  "name": "FocusFlow",
+  "short_name": "FocusFlow",
+  "description": "Privacy-first productivity assistant with Chrome AI",
+  "theme_color": "#3b82f6",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ]
+}
