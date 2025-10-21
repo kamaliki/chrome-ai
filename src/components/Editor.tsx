@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Languages, Sparkles } from 'lucide-react';
+import { Save, Languages, Sparkles, Upload, Mic, Image, FileText } from 'lucide-react';
 import { Note } from '../types/chrome-ai';
 import { saveNote, getNotes } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState('');
   const [selectedText, setSelectedText] = useState('');
-  const { rewriteText, translateText, isLoading } = useAI();
+  const { rewriteText, translateText, processMultimodalInput, isLoading } = useAI();
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<Array<{id: string, url: string, name: string}>>([]);
 
   useEffect(() => {
     loadNotes();
@@ -75,6 +79,89 @@ export const Editor: React.FC = () => {
     setContent('');
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      // Create image URL and add to state
+      const imageUrl = URL.createObjectURL(file);
+      const imageId = `img-${Date.now()}`;
+      
+      setUploadedImages(prev => [...prev, { id: imageId, url: imageUrl, name: file.name }]);
+      
+      // Add text reference in content
+      setContent(prev => prev + `\n\n📷 Image: ${file.name}\n[Processing image...]\n`);
+      
+      const extractedText = await processMultimodalInput({ image: file });
+      
+      // Replace the processing message with actual result
+      setContent(prev => prev.replace('[Processing image...]\n', `AI Analysis: ${extractedText}\n\n---\n`));
+    } catch (error) {
+      console.error('Image upload error:', error);
+      setContent(prev => prev.replace('[Processing image...]\n', '❌ Image processing failed\n'));
+    }
+    
+    // Clear the input
+    event.target.value = '';
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      
+      recorder.onstop = async () => {
+        try {
+          // Add immediate feedback
+          setContent(prev => prev + '\n\n[Processing audio...]\n');
+          
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+          
+          const transcribedText = await processMultimodalInput({ audio: audioFile });
+          
+          // Replace the processing message with actual result
+          setContent(prev => prev.replace('[Processing audio...]\n', `🎤 Audio Transcription:\n${transcribedText}\n`));
+        } catch (error) {
+          console.error('Audio processing error:', error);
+          setContent(prev => prev.replace('[Processing audio...]\n', '❌ Audio processing failed\n'));
+        }
+        
+        // Clean up
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      recorder.onerror = (error) => {
+        console.error('Recording error:', error);
+        setIsRecording(false);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      setMediaRecorder(recorder);
+      recorder.start(1000); // Collect data every second
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       {/* Notes Sidebar */}
@@ -121,7 +208,7 @@ export const Editor: React.FC = () => {
       {/* Editor */}
       <div className="flex-1 h-full flex flex-col">
         {/* Toolbar */}
-        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0">
+        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0 flex-wrap">
           <Button
             onClick={handleSave}
             variant="default"
@@ -130,6 +217,38 @@ export const Editor: React.FC = () => {
             <Save size={16} />
             Save
           </Button>
+          
+          {/* Multimodal Input */}
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="image-upload"
+            />
+            <Button
+              onClick={() => document.getElementById('image-upload')?.click()}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={isLoading}
+            >
+              <Image size={16} />
+              Image
+            </Button>
+            
+            <Button
+              onClick={isRecording ? stopRecording : startRecording}
+              variant={isRecording ? "destructive" : "outline"}
+              size="sm"
+              className="gap-2"
+              disabled={isLoading}
+            >
+              <Mic size={16} />
+              {isRecording ? 'Stop' : 'Record'}
+            </Button>
+          </div>
           
           {selectedText && (
             <>
@@ -156,16 +275,38 @@ export const Editor: React.FC = () => {
           )}
         </div>
 
-        {/* Text Area */}
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onMouseUp={handleTextSelection}
-          onKeyUp={handleTextSelection}
-          placeholder="Start writing your thoughts..."
-          className="flex-1 resize-none border-none text-lg leading-relaxed"
-          style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-        />
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Uploaded Images */}
+          {uploadedImages.length > 0 && (
+            <div className="p-4 border-b bg-muted/20">
+              <h4 className="text-sm font-medium mb-2">Uploaded Images:</h4>
+              <div className="flex flex-wrap gap-2">
+                {uploadedImages.map((img) => (
+                  <div key={img.id} className="relative">
+                    <img 
+                      src={img.url} 
+                      alt={img.name}
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                    <div className="text-xs text-center mt-1 truncate w-20">{img.name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Text Area */}
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onMouseUp={handleTextSelection}
+            onKeyUp={handleTextSelection}
+            placeholder="Start writing your thoughts..."
+            className="flex-1 resize-none border-none text-lg leading-relaxed"
+            style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+          />
+        </div>
       </div>
     </div>
   );

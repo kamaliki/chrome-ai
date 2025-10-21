@@ -6,8 +6,8 @@ declare global {
         topK?: number;
         initialPrompts?: Array<{ role: string; content: string }>;
       }): Promise<{
-        prompt(input: string): Promise<string>;
-        promptStreaming(input: string): AsyncIterable<string>;
+        prompt(input: string | { text?: string; image?: File; audio?: File }): Promise<string>;
+        promptStreaming(input: string | { text?: string; image?: File; audio?: File }): AsyncIterable<string>;
         countPromptTokens?(input: string): Promise<number>;
         measureInputUsage?(input: string): Promise<number>;
         destroy(): void;
