@@ -192,7 +192,8 @@ export const Editor: React.FC = () => {
       console.log('Recording state:', recorder.state);
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert(`Could not access microphone: ${error.message}. Please check permissions and try again.`);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      alert(`Could not access microphone: ${errorMessage}. Please check permissions and try again.`);
     }
   };
 
