@@ -126,21 +126,54 @@ export const useAI = () => {
       
       // Since multimodal AI isn't fully available yet, provide helpful fallbacks
       if (input.image) {
-        const model = await createLanguageModel({
-          systemPrompt: 'You are helping with image analysis. Provide a helpful response about image processing.'
-        });
-        const result = await model.prompt('An image has been uploaded. Note: Full image analysis with Chrome\'s built-in AI is coming soon. For now, this serves as a placeholder for when multimodal support is fully available.');
-        model.destroy();
-        return result;
+        try {
+          const session = await createLanguageModel({
+            expectedInputs: [{ type: 'image' }, { type: 'text' }]
+          });
+          
+          const result = await session.prompt([
+            {
+              role: 'user',
+              content: [
+                { type: 'text', value: 'Extract all text from this image and format it as clear notes' },
+                { type: 'image', value: input.image }
+              ]
+            }
+          ]);
+          
+          session.destroy();
+          return result;
+        } catch (ocrError) {
+          console.log('OCR failed:', ocrError);
+          return 'Image uploaded successfully! Note: Text extraction requires Chrome 127+ with AI flags enabled.';
+        }
       }
       
       if (input.audio) {
-        const model = await createLanguageModel({
-          systemPrompt: 'You are helping with audio transcription. Provide a helpful response about audio processing.'
-        });
-        const result = await model.prompt('An audio recording has been captured. Note: Full audio transcription with Chrome\'s built-in AI is coming soon. For now, this serves as a placeholder for when multimodal support is fully available.');
-        model.destroy();
-        return result;
+        try {
+          const arrayBuffer = await input.audio.arrayBuffer();
+          
+          const session = await createLanguageModel({
+            expectedInputs: [{ type: 'audio' }],
+            temperature: 0.1
+          });
+          
+          const result = await session.prompt([
+            {
+              role: 'user',
+              content: [
+                { type: 'text', value: 'Transcribe this audio' },
+                { type: 'audio', value: arrayBuffer }
+              ]
+            }
+          ]);
+          
+          session.destroy();
+          return result;
+        } catch (transcribeError) {
+          console.log('Transcription failed:', transcribeError);
+          return 'Audio recorded successfully! Note: Transcription requires Chrome 127+ with AI flags enabled.';
+        }
       }
       
       // Regular text processing
@@ -167,12 +200,67 @@ export const useAI = () => {
     }
   }, []);
 
+  const proofreadText = useCallback(async (text: string) => {
+    if (!text.trim()) return null;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // @ts-ignore - Proofreader API is experimental
+      if (!('Proofreader' in self)) {
+        return null;
+      }
+      
+      // @ts-ignore
+      const proofreader = await self.Proofreader.create({
+        includeCorrectionTypes: true,
+        includeCorrectionExplanations: true,
+        expectedInputLanguagues: ['en'],
+        correctionExplanationLanguage: 'en'
+      });
+      
+      const result = await proofreader.proofread(text);
+      return result;
+    } catch (err) {
+      console.log('Proofreading failed:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const speakResponse = useCallback((text: string) => {
+    if (!text.trim()) return;
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 0.8;
+    
+    // Use a pleasant voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => 
+      voice.name.includes('Google') || 
+      voice.name.includes('Microsoft') ||
+      voice.default
+    );
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
   return {
     summarizeText,
     rewriteText,
     translateText,
     generatePrompt,
     processMultimodalInput,
+    proofreadText,
+    speakResponse,
     isLoading,
     error,
     isAIAvailable: isAIAvailable()

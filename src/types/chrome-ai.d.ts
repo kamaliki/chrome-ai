@@ -4,10 +4,11 @@ declare global {
       create(options?: {
         temperature?: number;
         topK?: number;
-        initialPrompts?: Array<{ role: string; content: string }>;
+        initialPrompts?: Array<{ role: string; content: string | Array<{type: string; value: any}> }>;
+        expectedInputs?: Array<{ type: string }>;
       }): Promise<{
-        prompt(input: string | { text?: string; image?: File; audio?: File }): Promise<string>;
-        promptStreaming(input: string | { text?: string; image?: File; audio?: File }): AsyncIterable<string>;
+        prompt(input: string | Array<{ role: string; content: Array<{type: string; value: any}> }>): Promise<string>;
+        promptStreaming(input: string | Array<{ role: string; content: Array<{type: string; value: any}> }>): AsyncIterable<string>;
         countPromptTokens?(input: string): Promise<number>;
         measureInputUsage?(input: string): Promise<number>;
         destroy(): void;

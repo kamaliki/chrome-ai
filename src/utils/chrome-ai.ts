@@ -6,20 +6,29 @@ export const createLanguageModel = async (options?: {
   temperature?: number;
   topK?: number;
   systemPrompt?: string;
+  initialPrompts?: Array<{ role: string; content: string }>;
+  expectedInputs?: Array<{ type: string }>;
 }) => {
   if (!isAIAvailable() || !window.LanguageModel) {
     throw new Error('LanguageModel API not available');
   }
   
-  const initialPrompts = options?.systemPrompt ? [
-    { role: 'system', content: options.systemPrompt }
-  ] : [];
+  let initialPrompts = options?.initialPrompts || [];
+  if (options?.systemPrompt) {
+    initialPrompts = [{ role: 'system', content: options.systemPrompt }, ...initialPrompts];
+  }
   
-  return await window.LanguageModel.create({
+  const createOptions: any = {
     temperature: options?.temperature || 0.8,
     topK: options?.topK || 3,
     initialPrompts
-  });
+  };
+  
+  if (options?.expectedInputs) {
+    createOptions.expectedInputs = options.expectedInputs;
+  }
+  
+  return await window.LanguageModel.create(createOptions);
 };
 
 export const getModelParams = async () => {

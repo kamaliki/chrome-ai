@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Languages, Sparkles, Upload, Mic, Image, FileText } from 'lucide-react';
+import { Save, Languages, Sparkles, Upload, Mic, Image, FileText, Volume2, VolumeX } from 'lucide-react';
 import { Note } from '../types/chrome-ai';
 import { saveNote, getNotes } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
@@ -14,10 +14,11 @@ export const Editor: React.FC = () => {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState('');
   const [selectedText, setSelectedText] = useState('');
-  const { rewriteText, translateText, processMultimodalInput, isLoading } = useAI();
+  const { rewriteText, translateText, processMultimodalInput, speakResponse, isLoading } = useAI();
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [uploadedImages, setUploadedImages] = useState<Array<{id: string, url: string, name: string}>>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     loadNotes();
@@ -64,6 +65,9 @@ export const Editor: React.FC = () => {
     const newContent = content.replace(selectedText, rewritten);
     setContent(newContent);
     setSelectedText('');
+    
+    // Speak the rewritten text
+    speakResponse(`Text rewritten: ${rewritten}`);
   };
 
   const handleTranslate = async () => {
@@ -72,6 +76,9 @@ export const Editor: React.FC = () => {
     const newContent = content.replace(selectedText, translated);
     setContent(newContent);
     setSelectedText('');
+    
+    // Speak the translation
+    speakResponse(`Translation: ${translated}`);
   };
 
   const createNewNote = () => {
@@ -97,6 +104,9 @@ export const Editor: React.FC = () => {
       
       // Replace the processing message with actual result
       setContent(prev => prev.replace('[Processing image...]\n', `AI Analysis: ${extractedText}\n\n---\n`));
+      
+      // Speak the AI response
+      speakResponse(`Image analysis complete: ${extractedText}`);
     } catch (error) {
       console.error('Image upload error:', error);
       setContent(prev => prev.replace('[Processing image...]\n', '❌ Image processing failed\n'));
@@ -108,31 +118,55 @@ export const Editor: React.FC = () => {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      console.log('Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
+      
+      console.log('Microphone access granted, creating recorder...');
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
       const chunks: BlobPart[] = [];
       
       recorder.ondataavailable = (e) => {
+        console.log('Audio data available:', e.data.size, 'bytes');
         if (e.data.size > 0) {
           chunks.push(e.data);
         }
       };
       
       recorder.onstop = async () => {
+        console.log('Recording stopped, processing audio...');
         try {
+          if (chunks.length === 0) {
+            console.error('No audio data recorded');
+            setContent(prev => prev + '\n\n❌ No audio data recorded\n');
+            return;
+          }
+          
           // Add immediate feedback
           setContent(prev => prev + '\n\n[Processing audio...]\n');
           
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
+          const audioBlob = new Blob(chunks, { type: recorder.mimeType });
+          console.log('Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+          
+          const audioFile = new File([audioBlob], 'recording.webm', { type: audioBlob.type });
           
           const transcribedText = await processMultimodalInput({ audio: audioFile });
           
           // Replace the processing message with actual result
           setContent(prev => prev.replace('[Processing audio...]\n', `🎤 Audio Transcription:\n${transcribedText}\n`));
+          
+          // Speak confirmation
+          speakResponse('Audio transcription complete');
         } catch (error) {
           console.error('Audio processing error:', error);
-          setContent(prev => prev.replace('[Processing audio...]\n', '❌ Audio processing failed\n'));
+          setContent(prev => prev.replace('[Processing audio...]\n', `❌ Audio processing failed: ${error}\n`));
         }
         
         // Clean up
@@ -143,22 +177,37 @@ export const Editor: React.FC = () => {
         console.error('Recording error:', error);
         setIsRecording(false);
         stream.getTracks().forEach(track => track.stop());
+        alert(`Recording error: ${error}`);
+      };
+      
+      recorder.onstart = () => {
+        console.log('Recording started');
+        setContent(prev => prev + '\n\n🎤 Recording... (speak now)\n');
       };
       
       setMediaRecorder(recorder);
       recorder.start(1000); // Collect data every second
       setIsRecording(true);
+      
+      console.log('Recording state:', recorder.state);
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Could not access microphone. Please check permissions.');
+      alert(`Could not access microphone: ${error.message}. Please check permissions and try again.`);
     }
   };
 
   const stopRecording = () => {
+    console.log('Stop recording called, recorder state:', mediaRecorder?.state);
     if (mediaRecorder && mediaRecorder.state === 'recording') {
+      console.log('Stopping recorder...');
       mediaRecorder.stop();
       setIsRecording(false);
       setMediaRecorder(null);
+      
+      // Remove the "Recording..." message
+      setContent(prev => prev.replace('\n\n🎤 Recording... (speak now)\n', ''));
+    } else {
+      console.log('Recorder not in recording state or null');
     }
   };
 
@@ -247,6 +296,25 @@ export const Editor: React.FC = () => {
             >
               <Mic size={16} />
               {isRecording ? 'Stop' : 'Record'}
+            </Button>
+            
+            <Button
+              onClick={() => {
+                if (isSpeaking) {
+                  window.speechSynthesis.cancel();
+                  setIsSpeaking(false);
+                } else {
+                  const textToSpeak = selectedText || content.slice(-200) || 'No content to read';
+                  speakResponse(textToSpeak);
+                  setIsSpeaking(true);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              {isSpeaking ? 'Stop' : 'Speak'}
             </Button>
           </div>
           
