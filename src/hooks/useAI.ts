@@ -18,7 +18,7 @@ export const useAI = () => {
       
       const model = await createLanguageModel({
         systemPrompt: 'You are a helpful assistant that creates concise summaries.',
-        outputLanguage: 'en'
+        // Removed outputLanguage as it is not part of the expected type
       });
       const summary = await model.prompt(`Summarize this text: ${text}`);
       model.destroy();
@@ -45,7 +45,7 @@ export const useAI = () => {
       
       const model = await createLanguageModel({
         systemPrompt: 'You are a helpful assistant that rewrites text and explains changes.',
-        outputLanguage: 'en'
+        //outputLanguage: 'en'
       });
       const response = await model.prompt(`Rewrite this text in a ${tone} tone and then explain what you changed and why:\n\nOriginal: ${text}`);
       model.destroy();
@@ -79,7 +79,7 @@ export const useAI = () => {
       const outputLang = targetLang === 'es' ? 'es' : targetLang === 'ja' ? 'ja' : 'en';
       const model = await createLanguageModel({
         systemPrompt: 'You are a helpful translator.',
-        outputLanguage: outputLang
+        //outputLanguage: outputLang
       });
       const response = await model.prompt(`Translate this text to ${targetLang} and return ONLY the translated text without any explanations: ${text}`);
       model.destroy();
@@ -119,7 +119,7 @@ export const useAI = () => {
       
       const model = await createLanguageModel({
         systemPrompt: 'You are a helpful assistant that creates motivational prompts and questions.',
-        outputLanguage: 'en'
+        //outputLanguage: 'en'
       });
       const prompt = await model.prompt(context);
       model.destroy();
@@ -194,7 +194,7 @@ export const useAI = () => {
       const session = await createLanguageModel({
         expectedInputs,
         temperature: 0.1,
-        outputLanguage: 'en'
+        //outputLanguage: 'en'
       });
       
       const result = await session.prompt([{ role: 'user', content }]);
