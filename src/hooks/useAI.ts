@@ -17,7 +17,8 @@ export const useAI = () => {
       }
       
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that creates concise summaries.'
+        systemPrompt: 'You are a helpful assistant that creates concise summaries.',
+        outputLanguage: 'en'
       });
       const summary = await model.prompt(`Summarize this text: ${text}`);
       model.destroy();
@@ -31,27 +32,34 @@ export const useAI = () => {
     }
   }, []);
 
-  const rewriteText = useCallback(async (text: string, tone = 'professional'): Promise<string> => {
-    if (!text.trim()) return text;
+  const rewriteText = useCallback(async (text: string, tone = 'professional'): Promise<{result: string, explanation: string}> => {
+    if (!text.trim()) return {result: text, explanation: 'No text provided'};
     
     setIsLoading(true);
     setError(null);
     
     try {
       if (!isAIAvailable()) {
-        return text;
+        return {result: text, explanation: 'Chrome AI not available'};
       }
       
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that rewrites text to improve clarity and tone.'
+        systemPrompt: 'You are a helpful assistant that rewrites text and explains changes.',
+        outputLanguage: 'en'
       });
-      const rewritten = await model.prompt(`Rewrite this text in a ${tone} tone: ${text}`);
+      const response = await model.prompt(`Rewrite this text in a ${tone} tone and then explain what you changed and why:\n\nOriginal: ${text}`);
       model.destroy();
-      return rewritten;
+      
+      // Split response into result and explanation
+      const parts = response.split('**Here\'s what I changed');
+      const result = parts[0].trim();
+      const explanation = parts.length > 1 ? '**Here\'s what I changed' + parts[1] : 'Text rewritten successfully';
+      
+      return {result, explanation};
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to rewrite';
       setError(errorMsg);
-      return text;
+      return {result: text, explanation: `Error: ${errorMsg}`};
     } finally {
       setIsLoading(false);
     }
@@ -68,12 +76,29 @@ export const useAI = () => {
         return text;
       }
       
+      const outputLang = targetLang === 'es' ? 'es' : targetLang === 'ja' ? 'ja' : 'en';
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful translator.'
+        systemPrompt: 'You are a helpful translator.',
+        outputLanguage: outputLang
       });
-      const translated = await model.prompt(`Translate this text to ${targetLang}: ${text}`);
+      const response = await model.prompt(`Translate this text to ${targetLang} and return ONLY the translated text without any explanations: ${text}`);
       model.destroy();
-      return translated;
+      
+      // Extract clean translation by removing common explanation patterns
+      let cleanResult = response;
+      if (response.includes('**')) {
+        const match = response.match(/\*\*(.*?)\*\*/s);
+        if (match) cleanResult = match[1].trim();
+      }
+      if (cleanResult.includes('Here\'s')) {
+        cleanResult = cleanResult.split('Here\'s')[0].trim();
+      }
+      if (cleanResult.toLowerCase().includes('translation')) {
+        const lines = cleanResult.split('\n');
+        cleanResult = lines.find(line => !line.toLowerCase().includes('translation') && line.trim()) || cleanResult;
+      }
+      
+      return cleanResult.trim();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to translate';
       setError(errorMsg);
@@ -93,7 +118,8 @@ export const useAI = () => {
       }
       
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that creates motivational prompts and questions.'
+        systemPrompt: 'You are a helpful assistant that creates motivational prompts and questions.',
+        outputLanguage: 'en'
       });
       const prompt = await model.prompt(context);
       model.destroy();
@@ -111,89 +137,82 @@ export const useAI = () => {
     setIsLoading(true);
     setError(null);
     
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error('Processing timeout')), 10000); // 10 second timeout
-    });
-    
-    const processPromise = async (): Promise<string> => {
+    try {
       if (!isAIAvailable()) {
-        // Fallback for when AI is not available
-        if (input.image) return 'Image uploaded - Chrome AI not available. Multimodal features require Chrome 127+ with AI flags enabled.';
-        if (input.audio) return 'Audio recorded - Chrome AI not available. Multimodal features require Chrome 127+ with AI flags enabled.';
+        if (input.image) return 'Image uploaded - Chrome AI not available.';
+        if (input.audio) return 'Audio recorded - Chrome AI not available.';
         return input.text || 'No content to process';
       }
       
-      // Since multimodal AI isn't fully available yet, provide helpful fallbacks
-      if (input.image) {
-        try {
-          const session = await createLanguageModel({
-            expectedInputs: [{ type: 'image' }, { type: 'text' }]
-          });
-          
-          const result = await session.prompt([
-            {
-              role: 'user',
-              content: [
-                { type: 'text', value: 'Extract all text from this image and format it as clear notes' },
-                { type: 'image', value: input.image }
-              ]
-            }
-          ]);
-          
-          session.destroy();
-          return result;
-        } catch (ocrError) {
-          console.log('OCR failed:', ocrError);
-          return 'Image uploaded successfully! Note: Text extraction requires Chrome 127+ with AI flags enabled.';
-        }
+      // Build content array for multimodal input
+      const content = [];
+      
+      if (input.text) {
+        content.push({ type: 'text', value: input.text });
       }
       
-      if (input.audio) {
-        try {
-          const arrayBuffer = await input.audio.arrayBuffer();
-          
-          const session = await createLanguageModel({
-            expectedInputs: [{ type: 'audio' }],
-            temperature: 0.1
-          });
-          
-          const result = await session.prompt([
-            {
-              role: 'user',
-              content: [
-                { type: 'text', value: 'Transcribe this audio' },
-                { type: 'audio', value: arrayBuffer }
-              ]
-            }
-          ]);
-          
-          session.destroy();
-          return result;
-        } catch (transcribeError) {
-          console.log('Transcription failed:', transcribeError);
-          return 'Audio recorded successfully! Note: Transcription requires Chrome 127+ with AI flags enabled.';
-        }
+      if (input.image && input.audio) {
+        // Combined image + audio processing
+        content.push(
+          { type: 'text', value: 'Extract text from this image and transcribe the audio. Combine into organized notes.' },
+          { type: 'image', value: input.image },
+          { type: 'audio', value: await input.audio.arrayBuffer() }
+        );
+      } else if (input.image) {
+        // Image-only processing
+        content.push(
+          { type: 'text', value: 'Extract all text from this image' },
+          { type: 'image', value: input.image }
+        );
+      } else if (input.audio) {
+        // Audio-only processing
+        console.log('Processing audio file:', {
+          name: input.audio.name,
+          size: input.audio.size,
+          type: input.audio.type
+        });
+        
+        const arrayBuffer = await input.audio.arrayBuffer();
+        console.log('Audio arrayBuffer size:', arrayBuffer.byteLength);
+        
+        content.push(
+          { type: 'text', value: 'Transcribe this audio and format as clear notes' },
+          { type: 'audio', value: arrayBuffer }
+        );
       }
       
-      // Regular text processing
-      const model = await createLanguageModel();
-      const result = await model.prompt(input.text || 'No content provided');
-      model.destroy();
+      if (!content.length) {
+        return 'No content provided';
+      }
+      
+      // Determine expected inputs
+      const expectedInputs = [];
+      if (input.image) expectedInputs.push({ type: 'image' });
+      if (input.audio) expectedInputs.push({ type: 'audio' });
+      expectedInputs.push({ type: 'text' });
+      
+      const session = await createLanguageModel({
+        expectedInputs,
+        temperature: 0.1,
+        outputLanguage: 'en'
+      });
+      
+      const result = await session.prompt([{ role: 'user', content }]);
+      session.destroy();
       return result;
-    };
-    
-    try {
-      const result = await Promise.race([processPromise(), timeoutPromise]);
-      return result;
+      
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to process input';
-      setError(errorMsg);
       console.error('Multimodal processing error:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Processing failed';
+      setError(errorMsg);
       
-      // Return helpful fallback
-      if (input.image) return 'Image uploaded successfully! \n\nNote: Full image analysis is coming soon with Chrome\'s multimodal AI updates.';
-      if (input.audio) return 'Audio recorded successfully! \n\nNote: Full transcription is coming soon with Chrome\'s multimodal AI updates.';
+      // Handle specific audio transcription unavailability
+      if (input.audio && errorMsg.includes('Model capability is not available')) {
+        return `🎤 Audio recorded successfully (${Math.round(input.audio.size / 1024)}KB)\n\n⚠️ Audio transcription is not yet available in this Chrome build.\n\nThe multimodal audio feature is still experimental. Your audio was recorded but transcription requires a newer Chrome version with full multimodal support.\n\nFor now, you can use this as a voice memo placeholder.`;
+      }
+      
+      if (input.image) return 'Image processed (fallback mode)';
+      if (input.audio) return 'Audio processed (fallback mode)';
       return 'Processing failed - please try again';
     } finally {
       setIsLoading(false);

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Save, Languages, Sparkles, Upload, Mic, Image, FileText, Volume2, VolumeX } from 'lucide-react';
-import { Note } from '../types/chrome-ai';
-import { saveNote, getNotes } from '../utils/storage';
+import { Save, Languages, Sparkles, Upload, Image, FileText, Volume2, VolumeX, Trash2, Clock } from 'lucide-react';
+import { Note, AIActivity } from '../types/chrome-ai';
+import { saveNote, getNotes, deleteNote } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -15,10 +16,42 @@ export const Editor: React.FC = () => {
   const [content, setContent] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const { rewriteText, translateText, processMultimodalInput, speakResponse, isLoading } = useAI();
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
   const [uploadedImages, setUploadedImages] = useState<Array<{id: string, url: string, name: string}>>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState('es');
+  const [aiActivities, setAiActivities] = useState<AIActivity[]>([]);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+
+  // Load AI activities for current note
+  useEffect(() => {
+    if (currentNote?.id) {
+      const savedActivities = localStorage.getItem(`focusflow-ai-activities-${currentNote.id}`);
+      if (savedActivities) {
+        try {
+          const parsed = JSON.parse(savedActivities).map((activity: any) => ({
+            ...activity,
+            timestamp: new Date(activity.timestamp)
+          }));
+          setAiActivities(parsed);
+        } catch (error) {
+          setAiActivities([]);
+        }
+      } else {
+        setAiActivities([]);
+      }
+    } else {
+      setAiActivities([]);
+    }
+  }, [currentNote?.id]);
+
+  // Save AI activities for current note
+  const saveAiActivities = (activities: AIActivity[]) => {
+    if (currentNote?.id) {
+      localStorage.setItem(`focusflow-ai-activities-${currentNote.id}`, JSON.stringify(activities));
+    }
+    setAiActivities(activities);
+  };
 
   useEffect(() => {
     loadNotes();
@@ -61,29 +94,94 @@ export const Editor: React.FC = () => {
 
   const handleRewrite = async () => {
     if (!selectedText) return;
-    const rewritten = await rewriteText(selectedText);
-    const newContent = content.replace(selectedText, rewritten);
-    setContent(newContent);
-    setSelectedText('');
+    const {result, explanation} = await rewriteText(selectedText);
     
-    // Speak the rewritten text
-    speakResponse(`Text rewritten: ${rewritten}`);
+    // Extract just the rewritten text (before any explanation)
+    const cleanResult = result.split('**')[0].trim();
+    const newContent = content.replace(selectedText, cleanResult);
+    setContent(newContent);
+    
+    // Add to AI activities
+    const activity: AIActivity = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      action: 'rewrite',
+      originalText: selectedText,
+      resultText: cleanResult,
+      explanation
+    };
+    saveAiActivities([activity, ...aiActivities]);
+    setShowAiPanel(true);
+    
+    setSelectedText('');
+    speakResponse(`Text rewritten`);
   };
 
   const handleTranslate = async () => {
     if (!selectedText) return;
-    const translated = await translateText(selectedText, 'es');
+    const translated = await translateText(selectedText, targetLanguage);
+    
     const newContent = content.replace(selectedText, translated);
     setContent(newContent);
-    setSelectedText('');
     
-    // Speak the translation
-    speakResponse(`Translation: ${translated}`);
+    // Add to AI activities
+    const activity: AIActivity = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      action: 'translate',
+      originalText: selectedText,
+      resultText: translated,
+      language: targetLanguage,
+      explanation: `Translated to ${targetLanguage.toUpperCase()}`
+    };
+    saveAiActivities([activity, ...aiActivities]);
+    setShowAiPanel(true);
+    
+    setSelectedText('');
+    speakResponseInLanguage(`Translation complete`, targetLanguage);
+  };
+
+  const speakResponseInLanguage = (text: string, lang: string) => {
+    if (!text.trim()) return;
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 0.8;
+    // Set language code
+    if (lang === 'es') utterance.lang = 'es-ES';
+    else if (lang === 'ja') utterance.lang = 'ja-JP';
+    else utterance.lang = 'en-US';
+    
+    // Find voice for the specific language
+    const voices = window.speechSynthesis.getVoices();
+    const targetVoice = voices.find(voice => 
+      voice.lang.startsWith(lang)
+    );
+    
+    if (targetVoice) {
+      utterance.voice = targetVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
   };
 
   const createNewNote = () => {
     setCurrentNote(null);
     setContent('');
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    await deleteNote(noteId);
+    
+    // If we deleted the current note, clear the editor
+    if (currentNote?.id === noteId) {
+      setCurrentNote(null);
+      setContent('');
+    }
+    
+    // Reload notes list
+    loadNotes();
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,12 +196,23 @@ export const Editor: React.FC = () => {
       setUploadedImages(prev => [...prev, { id: imageId, url: imageUrl, name: file.name }]);
       
       // Add text reference in content
-      setContent(prev => prev + `\n\n📷 Image: ${file.name}\n[Processing image...]\n`);
+      const processingText = `\n\n📷 Image: ${file.name}\n[Processing image...]\n`;
+      setContent(prev => prev + processingText);
       
       const extractedText = await processMultimodalInput({ image: file });
       
-      // Replace the processing message with actual result
-      setContent(prev => prev.replace('[Processing image...]\n', `AI Analysis: ${extractedText}\n\n---\n`));
+      // Replace the processing message with actual result and ensure it's saved
+      const analysisText = `AI Analysis: ${extractedText}\n\n---\n`;
+      setContent(prev => {
+        const newContent = prev.replace('[Processing image...]\n', analysisText);
+        // Auto-save the note with extracted text
+        setTimeout(() => {
+          if (newContent.includes(analysisText)) {
+            handleSave();
+          }
+        }, 100);
+        return newContent;
+      });
       
       // Speak the AI response
       speakResponse(`Image analysis complete: ${extractedText}`);
@@ -114,102 +223,6 @@ export const Editor: React.FC = () => {
     
     // Clear the input
     event.target.value = '';
-  };
-
-  const startRecording = async () => {
-    try {
-      console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
-        }
-      });
-      
-      console.log('Microphone access granted, creating recorder...');
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
-      });
-      const chunks: BlobPart[] = [];
-      
-      recorder.ondataavailable = (e) => {
-        console.log('Audio data available:', e.data.size, 'bytes');
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-      
-      recorder.onstop = async () => {
-        console.log('Recording stopped, processing audio...');
-        try {
-          if (chunks.length === 0) {
-            console.error('No audio data recorded');
-            setContent(prev => prev + '\n\n❌ No audio data recorded\n');
-            return;
-          }
-          
-          // Add immediate feedback
-          setContent(prev => prev + '\n\n[Processing audio...]\n');
-          
-          const audioBlob = new Blob(chunks, { type: recorder.mimeType });
-          console.log('Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
-          
-          const audioFile = new File([audioBlob], 'recording.webm', { type: audioBlob.type });
-          
-          const transcribedText = await processMultimodalInput({ audio: audioFile });
-          
-          // Replace the processing message with actual result
-          setContent(prev => prev.replace('[Processing audio...]\n', `🎤 Audio Transcription:\n${transcribedText}\n`));
-          
-          // Speak confirmation
-          speakResponse('Audio transcription complete');
-        } catch (error) {
-          console.error('Audio processing error:', error);
-          setContent(prev => prev.replace('[Processing audio...]\n', `❌ Audio processing failed: ${error}\n`));
-        }
-        
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      recorder.onerror = (error) => {
-        console.error('Recording error:', error);
-        setIsRecording(false);
-        stream.getTracks().forEach(track => track.stop());
-        alert(`Recording error: ${error}`);
-      };
-      
-      recorder.onstart = () => {
-        console.log('Recording started');
-        setContent(prev => prev + '\n\n🎤 Recording... (speak now)\n');
-      };
-      
-      setMediaRecorder(recorder);
-      recorder.start(1000); // Collect data every second
-      setIsRecording(true);
-      
-      console.log('Recording state:', recorder.state);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      alert(`Could not access microphone: ${errorMessage}. Please check permissions and try again.`);
-    }
-  };
-
-  const stopRecording = () => {
-    console.log('Stop recording called, recorder state:', mediaRecorder?.state);
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      console.log('Stopping recorder...');
-      mediaRecorder.stop();
-      setIsRecording(false);
-      setMediaRecorder(null);
-      
-      // Remove the "Recording..." message
-      setContent(prev => prev.replace('\n\n🎤 Recording... (speak now)\n', ''));
-    } else {
-      console.log('Recorder not in recording state or null');
-    }
   };
 
   return (
@@ -231,23 +244,41 @@ export const Editor: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               <Card 
-                className={`cursor-pointer transition-colors ${
+                className={`transition-colors ${
                   currentNote?.id === note.id
                     ? 'bg-primary/10 border-primary'
                     : 'hover:bg-muted/50'
                 }`}
-                onClick={() => {
-                  setCurrentNote(note);
-                  setContent(note.content);
-                }}
               >
                 <CardContent className="p-3">
-                  <div className="text-sm font-medium truncate">
-                    {note.content.split('\n')[0] || 'Untitled'}
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setCurrentNote(note);
+                      setContent(note.content);
+                    }}
+                  >
+                    <div className="text-sm font-medium truncate">
+                      {note.content.split('\n')[0] || 'Untitled'}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {new Date(note.updatedAt).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {new Date(note.updatedAt).toLocaleDateString()}
-                  </div>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Delete this note?')) {
+                        handleDeleteNote(note.id);
+                      }
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 w-full text-destructive hover:text-destructive"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
@@ -288,25 +319,19 @@ export const Editor: React.FC = () => {
               Image
             </Button>
             
-            <Button
-              onClick={isRecording ? stopRecording : startRecording}
-              variant={isRecording ? "destructive" : "outline"}
-              size="sm"
-              className="gap-2"
-              disabled={isLoading}
-            >
-              <Mic size={16} />
-              {isRecording ? 'Stop' : 'Record'}
-            </Button>
-            
+
             <Button
               onClick={() => {
                 if (isSpeaking) {
                   window.speechSynthesis.cancel();
                   setIsSpeaking(false);
                 } else {
-                  const textToSpeak = selectedText || content.slice(-200) || 'No content to read';
-                  speakResponse(textToSpeak);
+                  const textToSpeak = selectedText || content || 'No content to read';
+                  // Auto-detect language and speak accordingly
+                  const isSpanish = /[ñáéíóúü]/i.test(textToSpeak);
+                  const isJapanese = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/i.test(textToSpeak);
+                  const detectedLang = isJapanese ? 'ja' : isSpanish ? 'es' : 'en';
+                  speakResponseInLanguage(textToSpeak, detectedLang);
                   setIsSpeaking(true);
                 }
               }}
@@ -316,6 +341,16 @@ export const Editor: React.FC = () => {
             >
               {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
               {isSpeaking ? 'Stop' : 'Speak'}
+            </Button>
+            
+            <Button
+              onClick={() => setShowAiPanel(!showAiPanel)}
+              variant={showAiPanel ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+            >
+              <Clock size={16} />
+              AI History
             </Button>
           </div>
           
@@ -331,50 +366,120 @@ export const Editor: React.FC = () => {
                 Rewrite
               </Button>
               
-              <Button
-                onClick={handleTranslate}
-                disabled={isLoading}
-                variant="outline"
-                className="gap-2"
-              >
-                <Languages size={16} />
-                Translate
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select value={targetLanguage} onValueChange={setTargetLanguage}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="es">🇪🇸 ES</SelectItem>
+                    <SelectItem value="en">🇺🇸 EN</SelectItem>
+                    <SelectItem value="ja">🇯🇵 JA</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  onClick={handleTranslate}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Languages size={16} />
+                  Translate
+                </Button>
+              </div>
             </>
           )}
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Uploaded Images */}
-          {uploadedImages.length > 0 && (
-            <div className="p-4 border-b bg-muted/20">
-              <h4 className="text-sm font-medium mb-2">Uploaded Images:</h4>
-              <div className="flex flex-wrap gap-2">
-                {uploadedImages.map((img) => (
-                  <div key={img.id} className="relative">
-                    <img 
-                      src={img.url} 
-                      alt={img.name}
-                      className="w-20 h-20 object-cover rounded border"
-                    />
-                    <div className="text-xs text-center mt-1 truncate w-20">{img.name}</div>
-                  </div>
-                ))}
+        <div className="flex-1 flex">
+          {/* Main Editor */}
+          <div className="flex-1 flex flex-col">
+            {/* Uploaded Images */}
+            {uploadedImages.length > 0 && (
+              <div className="p-4 border-b bg-muted/20">
+                <h4 className="text-sm font-medium mb-2">Uploaded Images:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {uploadedImages.map((img) => (
+                    <div key={img.id} className="relative">
+                      <img 
+                        src={img.url} 
+                        alt={img.name}
+                        className="w-20 h-20 object-cover rounded border"
+                      />
+                      <div className="text-xs text-center mt-1 truncate w-20">{img.name}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+            
+            {/* Text Area */}
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onMouseUp={handleTextSelection}
+              onKeyUp={handleTextSelection}
+              placeholder="Start writing your thoughts..."
+              className="flex-1 resize-none border-none text-lg leading-relaxed"
+              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+            />
+          </div>
+          
+          {/* AI Activity Panel */}
+          {showAiPanel && (
+            <div className="w-80 border-l bg-muted/30 p-4 overflow-y-auto">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Clock size={16} />
+                AI Activity History
+              </h3>
+              
+              {aiActivities.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No AI activities yet. Try rewriting or translating some text!</p>
+              ) : (
+                <div className="space-y-4">
+                  {aiActivities.map((activity) => (
+                    <Card key={activity.id} className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                          {activity.action.toUpperCase()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {activity.timestamp.toLocaleTimeString()}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <strong>Original:</strong>
+                          <p className="text-muted-foreground bg-muted/50 p-2 rounded text-xs mt-1">
+                            {activity.originalText}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <strong>Result:</strong>
+                          <p className="bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-100 p-2 rounded text-xs mt-1">
+                            {activity.resultText}
+                          </p>
+                        </div>
+                        
+                        {activity.explanation && (
+                          <div>
+                            <strong>Changes:</strong>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {activity.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          
-          {/* Text Area */}
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onMouseUp={handleTextSelection}
-            onKeyUp={handleTextSelection}
-            placeholder="Start writing your thoughts..."
-            className="flex-1 resize-none border-none text-lg leading-relaxed"
-            style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-          />
         </div>
       </div>
     </div>
