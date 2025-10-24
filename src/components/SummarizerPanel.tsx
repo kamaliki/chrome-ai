@@ -21,7 +21,12 @@ export const SummarizerPanel: React.FC = () => {
 
   const loadNotes = async () => {
     const savedNotes = await getNotes();
-    setNotes(savedNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    setNotes(
+      savedNotes.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+    );
   };
 
   const handleSummarize = async (note: Note) => {
@@ -33,24 +38,24 @@ export const SummarizerPanel: React.FC = () => {
     const noteSummary = await summarizeText(note.content);
     setSummary(noteSummary);
 
-    const keyInsights = await generatePrompt(`Extract key insights from: ${note.content}`);
+    const keyInsights = await generatePrompt(`3 bullet points only: ${note.content}`);
     setInsights(keyInsights);
 
-    const nextActions = await generatePrompt(`Suggest next actions based on: ${note.content}`);
+    const nextActions = await generatePrompt(`3 action items only: ${note.content}`);
     setActions(nextActions);
   };
 
   const summarizeAllNotes = async () => {
     if (notes.length === 0) return;
-    
+
     const allContent = notes.map(note => note.content).join('\n\n');
     const dailySummary = await summarizeText(allContent);
     setSummary(dailySummary);
 
-    const dailyInsights = await generatePrompt(`Extract key insights from today's notes: ${allContent}`);
+    const dailyInsights = await generatePrompt(`3 bullet points only: ${allContent}`);
     setInsights(dailyInsights);
 
-    const dailyActions = await generatePrompt(`Suggest next actions based on today's notes: ${allContent}`);
+    const dailyActions = await generatePrompt(`3 action items only: ${allContent}`);
     setActions(dailyActions);
   };
 
@@ -60,26 +65,30 @@ export const SummarizerPanel: React.FC = () => {
         <h2 className="text-2xl font-bold text-foreground mb-4">
           AI Summarizer
         </h2>
-        
+
         <div className="flex gap-2 mb-4">
           <Button
             onClick={summarizeAllNotes}
             disabled={isLoading || notes.length === 0}
             className="gap-2"
           >
-            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+            {isLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <FileText size={16} />
+            )}
             Summarize All Notes
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {notes.slice(0, 6).map((note) => (
+          {notes.slice(0, 6).map(note => (
             <motion.div
               key={note.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              <Card 
+              <Card
                 className={`cursor-pointer transition-all ${
                   selectedNote?.id === note.id
                     ? 'border-primary bg-primary/5'
@@ -132,12 +141,58 @@ export const SummarizerPanel: React.FC = () => {
               <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-800 dark:bg-yellow-900/10">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Lightbulb size={20} className="text-yellow-600 dark:text-yellow-400" />
+                    <Lightbulb
+                      size={20}
+                      className="text-yellow-600 dark:text-yellow-400"
+                    />
                     Key Insights
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-foreground leading-relaxed">{insights}</p>
+                  <div className="text-foreground leading-relaxed">
+                    {insights.split('\n').map((line, index) => {
+                      let cleanLine = line
+                        .replace(/^(Okay,.*?:|Here's.*?:|.*breakdown.*?:)/i, '')
+                        .trim();
+
+                      if (cleanLine.includes('**') && cleanLine.includes(':')) {
+                        const headerText = cleanLine.replace(
+                          /\*\*(.*?)\*\*:?/g,
+                          '$1'
+                        );
+                        return (
+                          <div
+                            key={index}
+                            className="font-semibold text-yellow-700 dark:text-yellow-300 mb-1 mt-3 first:mt-0"
+                          >
+                            {headerText}
+                          </div>
+                        );
+                      }
+
+                      if (cleanLine.startsWith('*') || cleanLine.startsWith('•')) {
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-start gap-2 mb-2 ml-2"
+                          >
+                            <span className="text-yellow-700 dark:text-yellow-300 mt-1">
+                              •
+                            </span>
+                            <span>
+                              {cleanLine.replace(/^[*•]\s*/, '')}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return cleanLine ? (
+                        <p key={index} className="mb-2">
+                          {cleanLine}
+                        </p>
+                      ) : null;
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -152,12 +207,58 @@ export const SummarizerPanel: React.FC = () => {
               <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Target size={20} className="text-green-600 dark:text-green-400" />
+                    <Target
+                      size={20}
+                      className="text-green-600 dark:text-green-400"
+                    />
                     Next Actions
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-foreground leading-relaxed">{actions}</p>
+                  <div className="text-foreground leading-relaxed">
+                    {actions.split('\n').map((line, index) => {
+                      let cleanLine = line
+                        .replace(/^(Okay,.*?:|Here's.*?:|.*breakdown.*?:)/i, '')
+                        .trim();
+
+                      if (cleanLine.includes('**') && cleanLine.includes(':')) {
+                        const headerText = cleanLine.replace(
+                          /\*\*(.*?)\*\*:?/g,
+                          '$1'
+                        );
+                        return (
+                          <div
+                            key={index}
+                            className="font-semibold text-green-700 dark:text-green-300 mb-1 mt-3 first:mt-0"
+                          >
+                            {headerText}
+                          </div>
+                        );
+                      }
+
+                      if (cleanLine.startsWith('*') || cleanLine.startsWith('•')) {
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-start gap-2 mb-2 ml-2"
+                          >
+                            <span className="text-green-600 dark:text-green-200 mt-1">
+                              •
+                            </span>
+                            <span>
+                              {cleanLine.replace(/^[*•]\s*/, '')}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return cleanLine ? (
+                        <p key={index} className="mb-2">
+                          {cleanLine}
+                        </p>
+                      ) : null;
+                    })} 
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

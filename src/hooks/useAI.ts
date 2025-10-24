@@ -118,7 +118,7 @@ export const useAI = () => {
       }
       
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that creates motivational prompts and questions.',
+        systemPrompt: 'You are a helpful teacher that helps students understand context amd meaning',
         //outputLanguage: 'en'
       });
       const prompt = await model.prompt(context);
