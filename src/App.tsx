@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { 
   Edit3, 
   FileText, 
-  Timer as TimerIcon, 
-  Sparkles, 
   Languages, 
   Brain,
   Settings,
@@ -18,8 +16,6 @@ import {
 } from 'lucide-react';
 import { Editor } from './components/Editor';
 import { SummarizerPanel } from './components/SummarizerPanel';
-import { Timer } from './components/Timer';
-import { PromptGenerator } from './components/PromptGenerator';
 import { Translator } from './components/Translator';
 import { initDB } from './utils/storage';
 import { isAIAvailable } from './utils/chrome-ai';
@@ -27,10 +23,8 @@ import { isAIAvailable } from './utils/chrome-ai';
 type Tab = 'editor' | 'summarizer' | 'timer' | 'prompts' | 'translator';
 
 const tabs = [
-  { id: 'editor', label: 'Focus Journal', icon: Edit3 },
+  { id: 'editor', label: 'My Notes', icon: Edit3 },
   { id: 'summarizer', label: 'AI Summarizer', icon: FileText },
-  { id: 'timer', label: 'Focus Timer', icon: TimerIcon },
-  { id: 'prompts', label: 'Daily Prompts', icon: Sparkles },
   { id: 'translator', label: 'Translator', icon: Languages },
 ] as const;
 
@@ -58,10 +52,6 @@ function AppContent() {
         return <Editor />;
       case 'summarizer':
         return <SummarizerPanel />;
-      case 'timer':
-        return <Timer />;
-      case 'prompts':
-        return <PromptGenerator />;
       case 'translator':
         return <Translator />;
       default:
@@ -93,7 +83,7 @@ function AppContent() {
                 FocusFlow
               </h1>
               <p className="text-sm text-muted-foreground">
-                Privacy-first AI productivity assistant
+                Privacy-first AI tutor assistant
               </p>
             </div>
           </div>

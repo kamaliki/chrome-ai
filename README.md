@@ -6,8 +6,6 @@ A privacy-first, offline-capable productivity and writing assistant that helps u
 
 - **Focus Journal**: Minimal text editor with AI-powered proofreading, rewriting, and translation
 - **AI Summarizer**: Generate summaries, key insights, and next actions from your notes
-- **Focus Timer**: Pomodoro timer with AI-generated motivational recaps
-- **Daily Prompt Generator**: AI-powered motivational and reflection prompts
 - **Multilingual Support**: Real-time translation using Chrome's Translator API
 - **Offline-First**: Works completely offline with PWA support
 - **Privacy-First**: All AI processing happens locally in your browser
