@@ -22,7 +22,7 @@ export const Editor: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState('es');
   const [aiActivities, setAiActivities] = useState<AIActivity[]>([]);
-  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(true);
 
   // Load AI activities for current note
   useEffect(() => {

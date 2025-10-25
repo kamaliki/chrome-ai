@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -17,21 +18,31 @@ import {
 import { Editor } from './components/Editor';
 import { SummarizerPanel } from './components/SummarizerPanel';
 import { Translator } from './components/Translator';
+import { OnboardingWelcome } from './components/OnboardingWelcome';
 import { initDB } from './utils/storage';
 import { isAIAvailable } from './utils/chrome-ai';
 
-type Tab = 'editor' | 'summarizer' | 'timer' | 'prompts' | 'translator';
-
 const tabs = [
-  { id: 'editor', label: 'My Notes', icon: Edit3 },
-  { id: 'summarizer', label: 'AI Summarizer', icon: FileText },
-  { id: 'translator', label: 'Translator', icon: Languages },
+  { id: 'notes', label: 'My Notes', icon: Edit3, path: '/app/notes' },
+  { id: 'summary', label: 'AI Summarizer', icon: FileText, path: '/app/summary' },
+  { id: 'translate', label: 'Translator', icon: Languages, path: '/app/translate' },
 ] as const;
 
-function AppContent() {
-  const [activeTab, setActiveTab] = useState<Tab>('editor');
+function WelcomePage() {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate('/app');
+  };
+
+  return <OnboardingWelcome onGetStarted={handleGetStarted} />;
+}
+
+function AppLayout() {
   const [aiStatus, setAiStatus] = useState<'available' | 'unavailable' | 'checking'>('checking');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     initializeApp();
@@ -46,18 +57,7 @@ function AppContent() {
     setAiStatus(aiAvailable ? 'available' : 'unavailable');
   };
 
-  const renderActiveComponent = () => {
-    switch (activeTab) {
-      case 'editor':
-        return <Editor />;
-      case 'summarizer':
-        return <SummarizerPanel />;
-      case 'translator':
-        return <Translator />;
-      default:
-        return <Editor />;
-    }
-  };
+  const isActiveTab = (path: string) => location.pathname === path;
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -128,10 +128,10 @@ function AppContent() {
                 <Button
                   key={tab.id}
                   onClick={() => {
-                    setActiveTab(tab.id);
+                    navigate(tab.path);
                     setSidebarOpen(false);
                   }}
-                  variant={activeTab === tab.id ? 'default' : 'ghost'}
+                  variant={isActiveTab(tab.path) ? 'default' : 'ghost'}
                   className="w-full justify-start gap-3"
                 >
                   <Icon size={20} />
@@ -167,14 +167,14 @@ function AppContent() {
         <main className="flex-1 overflow-auto md:ml-0">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab}
+              key={location.pathname}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
               className="min-h-full"
             >
-              {renderActiveComponent()}
+              <Outlet />
             </motion.div>
           </AnimatePresence>
         </main>
@@ -186,7 +186,17 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AppContent />
+      <Router>
+        <Routes>
+          <Route path="/" element={<WelcomePage />} />
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<Navigate to="/app/notes" replace />} />
+            <Route path="notes" element={<Editor />} />
+            <Route path="summary" element={<SummarizerPanel />} />
+            <Route path="translate" element={<Translator />} />
+          </Route>
+        </Routes>
+      </Router>
     </ThemeProvider>
   );
 }
