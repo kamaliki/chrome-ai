@@ -35,6 +35,14 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   summary?: string;
+  images?: Array<{id: string, url: string, name: string}>;
+  summaries?: Array<{
+    id: string;
+    summary: string;
+    insights: string;
+    actions: string;
+    timestamp: Date;
+  }>;
 }
 
 export interface TimerSession {

@@ -15,7 +15,7 @@ export const Editor: React.FC = () => {
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState('');
   const [selectedText, setSelectedText] = useState('');
-  const { rewriteText, translateText, processMultimodalInput, speakResponse, isLoading } = useAI();
+  const { rewriteText, translateText, processMultimodalInput, speakResponse, generatePrompt, isLoading } = useAI();
 
   const [uploadedImages, setUploadedImages] = useState<Array<{id: string, url: string, name: string}>>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -72,10 +72,12 @@ export const Editor: React.FC = () => {
     const note: Note = currentNote ? {
       ...currentNote,
       content,
+      images: uploadedImages,
       updatedAt: new Date()
     } : {
       id: Date.now().toString(),
       content,
+      images: uploadedImages,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -83,7 +85,7 @@ export const Editor: React.FC = () => {
     await saveNote(note);
     setCurrentNote(note);
     loadNotes();
-  }, [content, currentNote]);
+  }, [content, currentNote, uploadedImages]);
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -115,6 +117,31 @@ export const Editor: React.FC = () => {
     
     setSelectedText('');
     speakResponse(`Text rewritten`);
+  };
+
+  const handleCleanText = async () => {
+    if (!selectedText) return;
+    const cleanedText = await generatePrompt(
+      `Clean and format this extracted text, fix HTML entities, organize mathematical notation, and make it readable: ${selectedText}`
+    );
+    
+    const newContent = content.replace(selectedText, cleanedText);
+    setContent(newContent);
+    
+    // Add to AI activities
+    const activity: AIActivity = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      action: 'rewrite',
+      originalText: selectedText,
+      resultText: cleanedText,
+      explanation: 'Cleaned and formatted extracted text'
+    };
+    saveAiActivities([activity, ...aiActivities]);
+    setShowAiPanel(true);
+    
+    setSelectedText('');
+    speakResponse('Text cleaned and formatted');
   };
 
   const handleTranslate = async () => {
@@ -169,6 +196,7 @@ export const Editor: React.FC = () => {
   const createNewNote = () => {
     setCurrentNote(null);
     setContent('');
+    setUploadedImages([]);
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -189,11 +217,17 @@ export const Editor: React.FC = () => {
     if (!file) return;
     
     try {
-      // Create image URL and add to state
-      const imageUrl = URL.createObjectURL(file);
-      const imageId = `img-${Date.now()}`;
+      // Convert to base64 for persistent storage
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
       
-      setUploadedImages(prev => [...prev, { id: imageId, url: imageUrl, name: file.name }]);
+      const imageId = `img-${Date.now()}`;
+      const imageData = { id: imageId, url: base64, name: file.name };
+      
+      setUploadedImages(prev => [...prev, imageData]);
       
       // Add text reference in content
       const processingText = `\n\n📷 Image: ${file.name}\n[Processing image...]\n`;
@@ -205,7 +239,7 @@ export const Editor: React.FC = () => {
       const analysisText = `AI Analysis: ${extractedText}\n\n---\n`;
       setContent(prev => {
         const newContent = prev.replace('[Processing image...]\n', analysisText);
-        // Auto-save the note with extracted text
+        // Auto-save the note with extracted text and images
         setTimeout(() => {
           if (newContent.includes(analysisText)) {
             handleSave();
@@ -256,6 +290,7 @@ export const Editor: React.FC = () => {
                     onClick={() => {
                       setCurrentNote(note);
                       setContent(note.content);
+                      setUploadedImages(note.images || []);
                     }}
                   >
                     <div className="text-sm font-medium truncate">
@@ -364,6 +399,16 @@ export const Editor: React.FC = () => {
               >
                 <Sparkles size={16} />
                 Rewrite
+              </Button>
+              
+              <Button
+                onClick={handleCleanText}
+                disabled={isLoading}
+                variant="outline"
+                className="gap-2"
+              >
+                <FileText size={16} />
+                Clean Text
               </Button>
               
               <div className="flex items-center gap-2">

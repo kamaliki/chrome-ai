@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Languages, ArrowRight, Copy, Check } from 'lucide-react';
+import { Languages, ArrowRight, Copy, Check, Clock } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface TranslationHistory {
+  id: string;
+  inputText: string;
+  outputText: string;
+  targetLanguage: string;
+  timestamp: Date;
+}
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -19,13 +27,40 @@ export const Translator: React.FC = () => {
   const [outputText, setOutputText] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('sw-KE');
   const [copied, setCopied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { translateText, isLoading } = useAI();
+  const [translationHistory, setTranslationHistory] = useState<TranslationHistory[]>([]);
+
+  // Load translation history on component mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem('translation-history');
+    if (saved) {
+      const parsed = JSON.parse(saved).map((item: any) => ({
+        ...item,
+        timestamp: new Date(item.timestamp)
+      }));
+      setTranslationHistory(parsed);
+    }
+  }, []);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
     
     const translated = await translateText(inputText, targetLanguage);
     setOutputText(translated);
+    
+    // Save to history
+    const historyItem: TranslationHistory = {
+      id: Date.now().toString(),
+      inputText,
+      outputText: translated,
+      targetLanguage,
+      timestamp: new Date()
+    };
+    
+    const newHistory = [historyItem, ...translationHistory].slice(0, 50); // Keep last 50
+    setTranslationHistory(newHistory);
+    localStorage.setItem('translation-history', JSON.stringify(newHistory));
   };
 
   const handleCopy = async () => {
@@ -191,8 +226,66 @@ export const Translator: React.FC = () => {
             >
               Swap Languages
             </Button>
+            
+            <Button
+              onClick={() => setShowHistory(!showHistory)}
+              variant={showHistory ? "default" : "outline"}
+              size="sm"
+            >
+              <Clock size={16} className="mr-2" />
+              History
+            </Button>
           </div>
         </div>
+        
+        {/* Translation History */}
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="text-blue-500" size={20} />
+                  Translation History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-96 overflow-y-auto space-y-3">
+                  {translationHistory.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No translations yet. Start translating to build your history!
+                    </p>
+                  ) : (
+                    translationHistory.map((item) => (
+                      <div key={item.id} className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                           onClick={() => {
+                             setInputText(item.inputText);
+                             setOutputText(item.outputText);
+                             setTargetLanguage(item.targetLanguage);
+                           }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                            {languages.find(l => l.code === item.targetLanguage)?.name || item.targetLanguage}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.timestamp.toLocaleDateString()} {item.timestamp.toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <div className="text-muted-foreground">{item.inputText}</div>
+                          <div className="font-medium">{item.outputText}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );

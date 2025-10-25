@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Lightbulb, Target, Loader2 } from 'lucide-react';
+import { FileText, Lightbulb, Target, Loader2, Brain, CheckCircle, XCircle } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
-import { getNotes } from '../utils/storage';
+import { getNotes, saveNote } from '../utils/storage';
 import { Note } from '../types/chrome-ai';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+}
+
+interface QuizResult {
+  id: string;
+  noteId: string;
+  score: number;
+  totalQuestions: number;
+  answers: { questionId: string; userAnswer: number; correct: boolean }[];
+  timestamp: Date;
+}
 
 export const SummarizerPanel: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -13,11 +32,29 @@ export const SummarizerPanel: React.FC = () => {
   const [summary, setSummary] = useState('');
   const [insights, setInsights] = useState('');
   const [actions, setActions] = useState('');
+  const [showQuizDialog, setShowQuizDialog] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<{ [key: string]: number }>({});
+  const [quizComplete, setQuizComplete] = useState(false);
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
   const { summarizeText, generatePrompt, isLoading } = useAI();
 
   useEffect(() => {
     loadNotes();
+    loadQuizResults();
   }, []);
+
+  const loadQuizResults = () => {
+    const saved = localStorage.getItem('quiz-results');
+    if (saved) {
+      const parsed = JSON.parse(saved).map((result: any) => ({
+        ...result,
+        timestamp: new Date(result.timestamp)
+      }));
+      setQuizResults(parsed);
+    }
+  };
 
   const loadNotes = async () => {
     const savedNotes = await getNotes();
@@ -31,6 +68,21 @@ export const SummarizerPanel: React.FC = () => {
 
   const handleSummarize = async (note: Note) => {
     setSelectedNote(note);
+    
+    // Check if note already has summaries
+    if (note.summaries && note.summaries.length > 0) {
+      const latestSummary = note.summaries[0];
+      setSummary(latestSummary.summary);
+      setInsights(latestSummary.insights);
+      setActions(latestSummary.actions);
+      return;
+    }
+    
+    // Generate new summary
+    await generateNewSummary(note);
+  };
+
+  const generateNewSummary = async (note: Note) => {
     setSummary('');
     setInsights('');
     setActions('');
@@ -43,6 +95,96 @@ export const SummarizerPanel: React.FC = () => {
 
     const nextActions = await generatePrompt(`3 action items only: ${note.content}`);
     setActions(nextActions);
+    
+    // Save summary to note
+    const summaryData = {
+      id: Date.now().toString(),
+      summary: noteSummary,
+      insights: keyInsights,
+      actions: nextActions,
+      timestamp: new Date()
+    };
+    
+    const updatedNote = {
+      ...note,
+      summaries: [summaryData, ...(note.summaries || [])].slice(0, 5) // Keep last 5 summaries
+    };
+    
+    await saveNote(updatedNote);
+    setSelectedNote(updatedNote);
+    loadNotes();
+  };
+
+  const startQuiz = async () => {
+    if (!selectedNote || !actions) return;
+    
+    const questionsPrompt = `Based on these action items: "${actions}", create exactly 5 multiple choice questions to test understanding. Format as JSON array with objects containing: question, options (array of 4 choices), correctAnswer (0-3 index). Focus on comprehension and application.`;
+    
+    try {
+      const questionsResponse = await generatePrompt(questionsPrompt);
+      // Extract JSON from response
+      const jsonMatch = questionsResponse.match(/\[.*\]/s);
+      if (jsonMatch) {
+        const questions = JSON.parse(jsonMatch[0]).map((q: any, index: number) => ({
+          id: `q${index}`,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer
+        }));
+        setQuizQuestions(questions);
+        setCurrentQuestionIndex(0);
+        setUserAnswers({});
+        setQuizComplete(false);
+        setShowQuizDialog(true);
+      }
+    } catch (error) {
+      console.error('Failed to generate quiz:', error);
+    }
+  };
+
+  const handleAnswerSelect = (questionId: string, answerIndex: number) => {
+    setUserAnswers(prev => ({ ...prev, [questionId]: answerIndex }));
+  };
+
+  const nextQuestion = () => {
+    if (currentQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      completeQuiz();
+    }
+  };
+
+  const completeQuiz = () => {
+    const answers = quizQuestions.map(q => ({
+      questionId: q.id,
+      userAnswer: userAnswers[q.id] || -1,
+      correct: userAnswers[q.id] === q.correctAnswer
+    }));
+    
+    const score = answers.filter(a => a.correct).length;
+    
+    const result: QuizResult = {
+      id: Date.now().toString(),
+      noteId: selectedNote!.id,
+      score,
+      totalQuestions: quizQuestions.length,
+      answers,
+      timestamp: new Date()
+    };
+    
+    const newResults = [result, ...quizResults].slice(0, 50);
+    setQuizResults(newResults);
+    localStorage.setItem('quiz-results', JSON.stringify(newResults));
+    
+    setQuizComplete(true);
+  };
+
+  const resetQuiz = () => {
+    setShowQuizDialog(false);
+    setQuizQuestions([]);
+    setCurrentQuestionIndex(0);
+    setUserAnswers({});
+    setQuizComplete(false);
   };
 
   const summarizeAllNotes = async () => {
@@ -100,8 +242,15 @@ export const SummarizerPanel: React.FC = () => {
                   <div className="text-sm font-medium truncate mb-1">
                     {note.content.split('\n')[0] || 'Untitled'}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(note.updatedAt).toLocaleDateString()}
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(note.updatedAt).toLocaleDateString()}
+                    </div>
+                    {note.summaries && note.summaries.length > 0 && (
+                      <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                        {note.summaries.length} summary{note.summaries.length > 1 ? 'ies' : ''}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -113,6 +262,22 @@ export const SummarizerPanel: React.FC = () => {
       {/* Summary Results */}
       {(summary || insights || actions) && (
         <div className="flex-1 space-y-6">
+          {selectedNote && (
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Summary for: {selectedNote.content.split('\n')[0] || 'Untitled'}</h3>
+              <Button
+                onClick={() => generateNewSummary(selectedNote)}
+                disabled={isLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                New Summary
+              </Button>
+            </div>
+          )}
+          
           {summary && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -206,12 +371,108 @@ export const SummarizerPanel: React.FC = () => {
             >
               <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/10">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target
-                      size={20}
-                      className="text-green-600 dark:text-green-400"
-                    />
-                    Next Actions
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target
+                        size={20}
+                        className="text-green-600 dark:text-green-400"
+                      />
+                      Next Actions
+                    </div>
+                    <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
+                      <DialogTrigger asChild>
+                        <Button
+                          onClick={startQuiz}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Brain size={16} />
+                          Test Your Understanding
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Understanding Quiz</DialogTitle>
+                        </DialogHeader>
+                        
+                        {!quizComplete ? (
+                          quizQuestions.length > 0 && (
+                            <div className="space-y-4">
+                              <div className="flex justify-between text-sm text-muted-foreground">
+                                <span>Question {currentQuestionIndex + 1} of {quizQuestions.length}</span>
+                                <span>{Object.keys(userAnswers).length} answered</span>
+                              </div>
+                              
+                              <div className="space-y-4">
+                                <h3 className="text-lg font-medium">
+                                  {quizQuestions[currentQuestionIndex].question}
+                                </h3>
+                                
+                                <RadioGroup
+                                  value={userAnswers[quizQuestions[currentQuestionIndex].id]?.toString()}
+                                  onValueChange={(value) => handleAnswerSelect(quizQuestions[currentQuestionIndex].id, parseInt(value))}
+                                >
+                                  {quizQuestions[currentQuestionIndex].options.map((option, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
+                                        {option}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </RadioGroup>
+                              </div>
+                              
+                              <div className="flex justify-between">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                                  disabled={currentQuestionIndex === 0}
+                                >
+                                  Previous
+                                </Button>
+                                <Button
+                                  onClick={nextQuestion}
+                                  disabled={userAnswers[quizQuestions[currentQuestionIndex].id] === undefined}
+                                >
+                                  {currentQuestionIndex === quizQuestions.length - 1 ? 'Finish Quiz' : 'Next'}
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center space-y-4">
+                            <div className="text-4xl">
+                              {(quizResults[0]?.score || 0) / quizQuestions.length >= 0.8 ? '🎉' : 
+                               (quizResults[0]?.score || 0) / quizQuestions.length >= 0.6 ? '👍' : '📚'}
+                            </div>
+                            <h3 className="text-xl font-bold">
+                              Quiz Complete!
+                            </h3>
+                            <p className="text-lg">
+                              You scored {quizResults[0]?.score || 0} out of {quizQuestions.length}
+                            </p>
+                            <div className="space-y-2">
+                              {quizQuestions.map((q, index) => {
+                                const userAnswer = userAnswers[q.id];
+                                const isCorrect = userAnswer === q.correctAnswer;
+                                return (
+                                  <div key={q.id} className="flex items-center gap-2 text-sm">
+                                    {isCorrect ? 
+                                      <CheckCircle size={16} className="text-green-500" /> : 
+                                      <XCircle size={16} className="text-red-500" />
+                                    }
+                                    <span>Question {index + 1}: {isCorrect ? 'Correct' : 'Incorrect'}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <Button onClick={resetQuiz}>Close</Button>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
