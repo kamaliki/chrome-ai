@@ -43,6 +43,19 @@ export interface Note {
     actions: string;
     timestamp: Date;
   }>;
+  quizResults?: Array<{
+    id: string;
+    score: number;
+    totalQuestions: number;
+    timestamp: Date;
+    questions: Array<{
+      question: string;
+      options: string[];
+      correctAnswer: number;
+      userAnswer: number;
+      isCorrect: boolean;
+    }>;
+  }>;
 }
 
 export interface TimerSession {

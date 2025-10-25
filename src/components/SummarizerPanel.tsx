@@ -17,15 +17,6 @@ interface QuizQuestion {
   correctAnswer: number;
 }
 
-interface QuizResult {
-  id: string;
-  noteId: string;
-  score: number;
-  totalQuestions: number;
-  answers: { questionId: string; userAnswer: number; correct: boolean }[];
-  timestamp: Date;
-}
-
 export const SummarizerPanel: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -37,24 +28,11 @@ export const SummarizerPanel: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: number }>({});
   const [quizComplete, setQuizComplete] = useState(false);
-  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
   const { summarizeText, generatePrompt, isLoading } = useAI();
 
   useEffect(() => {
     loadNotes();
-    loadQuizResults();
   }, []);
-
-  const loadQuizResults = () => {
-    const saved = localStorage.getItem('quiz-results');
-    if (saved) {
-      const parsed = JSON.parse(saved).map((result: any) => ({
-        ...result,
-        timestamp: new Date(result.timestamp)
-      }));
-      setQuizResults(parsed);
-    }
-  };
 
   const loadNotes = async () => {
     const savedNotes = await getNotes();
@@ -154,27 +132,34 @@ export const SummarizerPanel: React.FC = () => {
     }
   };
 
-  const completeQuiz = () => {
+  const completeQuiz = async () => {
     const answers = quizQuestions.map(q => ({
-      questionId: q.id,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
       userAnswer: userAnswers[q.id] || -1,
-      correct: userAnswers[q.id] === q.correctAnswer
+      isCorrect: userAnswers[q.id] === q.correctAnswer
     }));
     
-    const score = answers.filter(a => a.correct).length;
+    const score = answers.filter(a => a.isCorrect).length;
     
-    const result: QuizResult = {
+    const quizResult = {
       id: Date.now().toString(),
-      noteId: selectedNote!.id,
       score,
       totalQuestions: quizQuestions.length,
-      answers,
-      timestamp: new Date()
+      timestamp: new Date(),
+      questions: answers
     };
     
-    const newResults = [result, ...quizResults].slice(0, 50);
-    setQuizResults(newResults);
-    localStorage.setItem('quiz-results', JSON.stringify(newResults));
+    // Save to note
+    const updatedNote = {
+      ...selectedNote!,
+      quizResults: [quizResult, ...(selectedNote!.quizResults || [])].slice(0, 10)
+    };
+    
+    await saveNote(updatedNote);
+    setSelectedNote(updatedNote);
+    loadNotes();
     
     setQuizComplete(true);
   };
@@ -219,7 +204,7 @@ export const SummarizerPanel: React.FC = () => {
             ) : (
               <FileText size={16} />
             )}
-            Summarize All Notes
+            Summarize Selected Notes
           </Button>
         </div>
 
@@ -444,15 +429,22 @@ export const SummarizerPanel: React.FC = () => {
                         ) : (
                           <div className="text-center space-y-4">
                             <div className="text-4xl">
-                              {(quizResults[0]?.score || 0) / quizQuestions.length >= 0.8 ? '🎉' : 
-                               (quizResults[0]?.score || 0) / quizQuestions.length >= 0.6 ? '👍' : '📚'}
+                              {Object.values(userAnswers).filter((answer, index) => answer === quizQuestions[index]?.correctAnswer).length / quizQuestions.length >= 0.8 ? '🎉' : 
+                               Object.values(userAnswers).filter((answer, index) => answer === quizQuestions[index]?.correctAnswer).length / quizQuestions.length >= 0.6 ? '👍' : '📚'}
                             </div>
                             <h3 className="text-xl font-bold">
                               Quiz Complete!
                             </h3>
                             <p className="text-lg">
-                              You scored {quizResults[0]?.score || 0} out of {quizQuestions.length}
+                              You scored {Object.values(userAnswers).filter((answer, index) => answer === quizQuestions[index]?.correctAnswer).length} out of {quizQuestions.length}
                             </p>
+                            {Object.values(userAnswers).filter((answer, index) => answer === quizQuestions[index]?.correctAnswer).length / quizQuestions.length < 0.6 && (
+                              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                                <p className="text-orange-800 dark:text-orange-200 text-sm">
+                                  Consider reviewing the material and retaking the quiz to improve your understanding.
+                                </p>
+                              </div>
+                            )}
                             <div className="space-y-2">
                               {quizQuestions.map((q, index) => {
                                 const userAnswer = userAnswers[q.id];
@@ -468,7 +460,14 @@ export const SummarizerPanel: React.FC = () => {
                                 );
                               })}
                             </div>
-                            <Button onClick={resetQuiz}>Close</Button>
+                            <div className="flex gap-2">
+                              {Object.values(userAnswers).filter((answer, index) => answer === quizQuestions[index]?.correctAnswer).length / quizQuestions.length < 0.6 && (
+                                <Button onClick={() => { resetQuiz(); startQuiz(); }} variant="outline">
+                                  Retake Quiz
+                                </Button>
+                              )}
+                              <Button onClick={resetQuiz}>Close</Button>
+                            </div>
                           </div>
                         )}
                       </DialogContent>
@@ -524,6 +523,63 @@ export const SummarizerPanel: React.FC = () => {
               </Card>
             </motion.div>
           )}
+        </div>
+      )}
+      
+      {/* Quiz History for Selected Note */}
+      {selectedNote?.quizResults && selectedNote.quizResults.length > 0 && (
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="text-purple-500" size={20} />
+                Quiz History for This Note
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {selectedNote.quizResults.map((result) => {
+                  const percentage = Math.round((result.score / result.totalQuestions) * 100);
+                  return (
+                    <div key={result.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(result.timestamp).toLocaleDateString()} at {new Date(result.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">
+                            {result.score}/{result.totalQuestions}
+                          </div>
+                          <div className={`text-sm ${
+                            percentage >= 80 ? 'text-green-600' :
+                            percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {percentage}%
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {result.questions.map((question, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            {question.isCorrect ? 
+                              <CheckCircle size={14} className="text-green-500" /> : 
+                              <XCircle size={14} className="text-red-500" />
+                            }
+                            <span className="text-muted-foreground">
+                              Question {index + 1}: {question.isCorrect ? 'Correct' : 'Incorrect'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
