@@ -287,7 +287,7 @@ export const Editor: React.FC = () => {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 h-full flex flex-col">
+      <div className="flex-1 h-screen flex flex-col">
         {/* Toolbar */}
         <div className="border-b p-4 flex items-center gap-2 flex-shrink-0 flex-wrap">
           <Button
@@ -393,7 +393,7 @@ export const Editor: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex h-0">
           {/* Main Editor */}
           <div className="flex-1 flex flex-col">
             {/* Uploaded Images */}
@@ -422,23 +422,26 @@ export const Editor: React.FC = () => {
               onMouseUp={handleTextSelection}
               onKeyUp={handleTextSelection}
               placeholder="Start writing your thoughts..."
-              className="flex-1 resize-none border-none text-lg leading-relaxed"
+              className="flex-1 resize text-lg max-h-screen m-1 p-1 border-none max-w-screen"
               style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
             />
           </div>
           
           {/* AI Activity Panel */}
           {showAiPanel && (
-            <div className="w-80 border-l bg-muted/30 p-4 overflow-y-auto">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Clock size={16} />
-                AI Activity History
-              </h3>
+            <div className="w-80 border-l bg-muted/30 flex flex-col">
+              <div className="p-4 border-b bg-muted/20 flex-shrink-0">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Clock size={16} />
+                  AI Activity History
+                </h3>
+              </div>
               
-              {aiActivities.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No AI activities yet. Try rewriting or translating some text!</p>
-              ) : (
-                <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto p-4">
+                {aiActivities.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No AI activities yet. Try rewriting or translating some text!</p>
+                ) : (
+                  <div className="space-y-4">
                   {aiActivities.map((activity) => (
                     <Card key={activity.id} className="p-3">
                       <div className="flex items-center gap-2 mb-2">
@@ -476,8 +479,9 @@ export const Editor: React.FC = () => {
                       </div>
                     </Card>
                   ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
