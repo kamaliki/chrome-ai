@@ -17,6 +17,8 @@ const languages = [
   { code: 'ja', name: 'Japanese' },
   { code: 'ko', name: 'Korean' },
   { code: 'zh', name: 'Chinese' },
+  //add swahili
+  { code: 'sw-KE', name: 'Swahili' }
 ];
 
 export const Translator: React.FC = () => {
