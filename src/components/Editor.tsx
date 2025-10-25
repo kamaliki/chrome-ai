@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EditorWelcome } from './EditorWelcome';
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -460,16 +461,20 @@ export const Editor: React.FC = () => {
               </div>
             )}
             
-            {/* Text Area */}
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onMouseUp={handleTextSelection}
-              onKeyUp={handleTextSelection}
-              placeholder="Start writing your thoughts..."
-              className="flex-1 resize text-lg max-h-screen m-1 p-1 border-none max-w-screen"
-              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-            />
+            {/* Text Area or Welcome Screen */}
+            {!content && !currentNote ? (
+              <EditorWelcome />
+            ) : (
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onMouseUp={handleTextSelection}
+                onKeyUp={handleTextSelection}
+                placeholder="Start writing your thoughts..."
+                className="flex-1 resize text-lg max-h-screen m-1 p-1 border-none max-w-screen"
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              />
+            )}
           </div>
           
           {/* AI Activity Panel */}
