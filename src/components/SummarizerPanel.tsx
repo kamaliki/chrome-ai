@@ -251,7 +251,7 @@ export const SummarizerPanel: React.FC = () => {
                     >
                       <CardContent className="p-3">
                         <div className="text-sm font-medium truncate mb-1">
-                          {note.content.split('\n')[0] || 'Untitled'}
+                          {note.title || 'Untitled'}
                         </div>
                         <div className="flex justify-between items-center mb-2">
                           <div className="text-xs text-muted-foreground">
@@ -290,7 +290,7 @@ export const SummarizerPanel: React.FC = () => {
         <div className="flex-1 space-y-6">
           {selectedNote && (
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Summary for: {selectedNote.content.split('\n')[0] || 'Untitled'}</h3>
+              <h3 className="text-lg font-semibold">Summary for: {selectedNote.title || 'Untitled'}</h3>
               <Button
                 onClick={() => generateNewSummary(selectedNote)}
                 disabled={isLoading}

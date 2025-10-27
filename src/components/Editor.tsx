@@ -26,6 +26,7 @@ export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState('');
+  const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState('');
   const [selectedText, setSelectedText] = useState('');
@@ -105,17 +106,19 @@ export const Editor: React.FC = () => {
     if (savedNotes.length > 0) {
       setCurrentNote(savedNotes[0]);
       setContent(savedNotes[0].content);
+      setTitle(savedNotes[0].title || '');
       setTopic(savedNotes[0].topic || '');
       setTags(savedNotes[0].tags?.join(', ') || '');
     }
   };
 
   const handleSave = useCallback(async () => {
-    if (!content.trim()) return;
+    if (!content.trim() || !title.trim() || !topic.trim() || !tags.trim()) return;
 
     const note: Note = currentNote ? {
       ...currentNote,
       content,
+      title: title.trim() || undefined,
       topic: topic.trim() || undefined,
       tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
       images: uploadedImages,
@@ -123,6 +126,7 @@ export const Editor: React.FC = () => {
     } : {
       id: Date.now().toString(),
       content,
+      title: title.trim() || undefined,
       topic: topic.trim() || undefined,
       tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
       images: uploadedImages,
@@ -133,7 +137,7 @@ export const Editor: React.FC = () => {
     await saveNote(note);
     setCurrentNote(note);
     loadNotes();
-  }, [content, topic, tags, currentNote, uploadedImages]);
+  }, [content, title, topic, tags, currentNote, uploadedImages]);
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -173,7 +177,10 @@ export const Editor: React.FC = () => {
       `Clean and format this text, fix HTML entities, organize notation, and make it readable. Return ONLY the cleaned text with no explanations: ${selectedText}`
     );
     
-    const newContent = content.replace(selectedText, cleanedText);
+    // Convert markdown to plain text for editor
+    const plainText = markdownToPlainText(cleanedText);
+    
+    const newContent = content.replace(selectedText, plainText);
     setContent(newContent);
     
     // Add to AI activities
@@ -256,6 +263,7 @@ export const Editor: React.FC = () => {
   const createNewNote = () => {
     setCurrentNote(null);
     setContent('');
+    setTitle('');
     setTopic('');
     setTags('');
     setUploadedImages([]);
@@ -269,6 +277,7 @@ export const Editor: React.FC = () => {
     if (currentNote?.id === noteId) {
       setCurrentNote(null);
       setContent('');
+      setTitle('');
       setTopic('');
       setTags('');
     }
@@ -379,13 +388,14 @@ export const Editor: React.FC = () => {
                     onClick={() => {
                       setCurrentNote(note);
                       setContent(note.content);
+                      setTitle(note.title || '');
                       setTopic(note.topic || '');
                       setTags(note.tags?.join(', ') || '');
                       setUploadedImages(note.images || []);
                     }}
                   >
                     <div className="text-sm font-medium truncate">
-                      {note.content.split('\n')[0] || 'Untitled'}
+                      {note.title || 'Untitled'}
                     </div>
                     {note.topic && (
                       <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">
@@ -578,6 +588,15 @@ export const Editor: React.FC = () => {
         <div className="flex-1 flex h-0 flex-col md:flex-row">
           {/* Main Editor */}
           <div className="flex-1 flex flex-col min-h-0">
+            {/* Note Title */}
+            <div className="p-4 border-b">
+              <Input
+                placeholder="Note Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-xl font-semibold border-none p-0 focus-visible:ring-0 shadow-none"
+              />
+            </div>
             {/* Uploaded Images */}
             {uploadedImages.length > 0 && (
               <div className="p-4 border-b bg-muted/20">
@@ -606,7 +625,7 @@ export const Editor: React.FC = () => {
                 onChange={(e) => setContent(e.target.value)}
                 onMouseUp={handleTextSelection}
                 onKeyUp={handleTextSelection}
-                placeholder="First line: Your note title (required)&#10;&#10;Then write your content here..."
+                placeholder="Write your note content here..."
                 className="flex-1 resize text-lg max-h-screen m-1 p-4 border-none max-w-screen"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               />
@@ -713,6 +732,7 @@ export const Editor: React.FC = () => {
                       onClick={() => {
                         setCurrentNote(note);
                         setContent(note.content);
+                        setTitle(note.title || '');
                         setTopic(note.topic || '');
                         setTags(note.tags?.join(', ') || '');
                         setUploadedImages(note.images || []);
@@ -720,7 +740,7 @@ export const Editor: React.FC = () => {
                       }}
                     >
                       <div className="font-medium truncate">
-                        {note.content.split('\n')[0] || 'Untitled'}
+                        {note.title || 'Untitled'}
                       </div>
                       {note.topic && (
                         <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">

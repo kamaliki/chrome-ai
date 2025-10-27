@@ -32,6 +32,7 @@ declare global {
 export interface Note {
   id: string;
   content: string;
+  title?: string;
   createdAt: Date;
   updatedAt: Date;
   topic?: string;
