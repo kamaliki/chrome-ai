@@ -473,6 +473,10 @@ export const Editor: React.FC = () => {
             variant="default"
             size="sm"
             className="gap-1 md:gap-2"
+            disabled={!content.trim() || !title.trim() || !topic.trim() || !tags.trim()}
+            title={!content.trim() || !title.trim() || !topic.trim() || !tags.trim() ? 
+              `Missing: ${[!title.trim() && 'Title', !topic.trim() && 'Topic', !tags.trim() && 'Tags', !content.trim() && 'Content'].filter(Boolean).join(', ')}` : 
+              'Save note'}
           >
             <Save size={14} />
             <span className="hidden sm:inline">Save</span>
