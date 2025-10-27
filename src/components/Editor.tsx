@@ -10,7 +10,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EditorWelcome } from './EditorWelcome';
-import { cleanOCRText } from '../utils/textFormatter';
+import { cleanOCRText, formatMarkdown } from '../utils/textFormatter';
+
+// Convert markdown to plain text for textarea display
+const markdownToPlainText = (markdown: string): string => {
+  return markdown
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^#+\s+/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '• ');
+};
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -26,6 +35,7 @@ export const Editor: React.FC = () => {
   const [targetLanguage, setTargetLanguage] = useState('es');
   const [aiActivities, setAiActivities] = useState<AIActivity[]>([]);
   const [showAiPanel, setShowAiPanel] = useState(true);
+  const [isWritingNew, setIsWritingNew] = useState(false);
 
   // Load AI activities for current note
   useEffect(() => {
@@ -135,7 +145,10 @@ export const Editor: React.FC = () => {
       `Clean and format this extracted text, fix HTML entities, organize mathematical notation, and make it readable: ${selectedText}`
     );
     
-    const newContent = content.replace(selectedText, cleanedText);
+    // Convert markdown to plain text for editor
+    const plainText = markdownToPlainText(cleanedText);
+    
+    const newContent = content.replace(selectedText, plainText);
     setContent(newContent);
     
     // Add to AI activities
@@ -209,6 +222,7 @@ export const Editor: React.FC = () => {
     setTopic('');
     setTags('');
     setUploadedImages([]);
+    setIsWritingNew(true);
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -501,7 +515,7 @@ export const Editor: React.FC = () => {
             )}
             
             {/* Text Area or Welcome Screen */}
-            {!content && !currentNote && notes.length === 0 ? (
+            {notes.length === 0 && !content && !currentNote && !isWritingNew ? (
               <EditorWelcome />
             ) : (
               <Textarea
@@ -552,9 +566,7 @@ export const Editor: React.FC = () => {
                         
                         <div>
                           <strong>Result:</strong>
-                          <p className="bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-100 p-2 rounded text-xs mt-1">
-                            {activity.resultText}
-                          </p>
+                          <div className="bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-100 p-2 rounded text-xs mt-1" dangerouslySetInnerHTML={{ __html: formatMarkdown(activity.resultText) }} />
                         </div>
                         
                         {activity.explanation && (

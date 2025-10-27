@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { WelcomeScreen } from './WelcomeScreen';
+import { formatMarkdown } from '../utils/textFormatter';
 
 interface QuizQuestion {
   id: string;
@@ -69,10 +70,10 @@ export const SummarizerPanel: React.FC = () => {
     const noteSummary = await summarizeText(note.content);
     setSummary(noteSummary);
 
-    const keyInsights = await generatePrompt(`3 bullet points only: ${note.content}`);
+    const keyInsights = await generatePrompt(`summarize key points only: ${note.content}`);
     setInsights(keyInsights);
 
-    const nextActions = await generatePrompt(`3 action items only: ${note.content}`);
+    const nextActions = await generatePrompt(`summarize action items only: ${note.content}`);
     setActions(nextActions);
     
     // Save summary to note
@@ -316,7 +317,7 @@ export const SummarizerPanel: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-foreground leading-relaxed">{summary}</p>
+                  <div className="text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: formatMarkdown(summary) }} />
                 </CardContent>
               </Card>
             </motion.div>
@@ -339,50 +340,7 @@ export const SummarizerPanel: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-foreground leading-relaxed">
-                    {insights.split('\n').map((line, index) => {
-                      let cleanLine = line
-                        .replace(/^(Okay,.*?:|Here's.*?:|.*breakdown.*?:)/i, '')
-                        .trim();
-
-                      if (cleanLine.includes('**') && cleanLine.includes(':')) {
-                        const headerText = cleanLine.replace(
-                          /\*\*(.*?)\*\*:?/g,
-                          '$1'
-                        );
-                        return (
-                          <div
-                            key={index}
-                            className="font-semibold text-yellow-700 dark:text-yellow-300 mb-1 mt-3 first:mt-0"
-                          >
-                            {headerText}
-                          </div>
-                        );
-                      }
-
-                      if (cleanLine.startsWith('*') || cleanLine.startsWith('•')) {
-                        return (
-                          <div
-                            key={index}
-                            className="flex items-start gap-2 mb-2 ml-2"
-                          >
-                            <span className="text-yellow-700 dark:text-yellow-300 mt-1">
-                              •
-                            </span>
-                            <span>
-                              {cleanLine.replace(/^[*•]\s*/, '')}
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      return cleanLine ? (
-                        <p key={index} className="mb-2">
-                          {cleanLine}
-                        </p>
-                      ) : null;
-                    })}
-                  </div>
+                  <div className="text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: formatMarkdown(insights) }} />
                 </CardContent>
               </Card>
             </motion.div>
@@ -515,50 +473,7 @@ export const SummarizerPanel: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-foreground leading-relaxed">
-                    {actions.split('\n').map((line, index) => {
-                      let cleanLine = line
-                        .replace(/^(Okay,.*?:|Here's.*?:|.*breakdown.*?:)/i, '')
-                        .trim();
-
-                      if (cleanLine.includes('**') && cleanLine.includes(':')) {
-                        const headerText = cleanLine.replace(
-                          /\*\*(.*?)\*\*:?/g,
-                          '$1'
-                        );
-                        return (
-                          <div
-                            key={index}
-                            className="font-semibold text-green-700 dark:text-green-300 mb-1 mt-3 first:mt-0"
-                          >
-                            {headerText}
-                          </div>
-                        );
-                      }
-
-                      if (cleanLine.startsWith('*') || cleanLine.startsWith('•')) {
-                        return (
-                          <div
-                            key={index}
-                            className="flex items-start gap-2 mb-2 ml-2"
-                          >
-                            <span className="text-green-600 dark:text-green-200 mt-1">
-                              •
-                            </span>
-                            <span>
-                              {cleanLine.replace(/^[*•]\s*/, '')}
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      return cleanLine ? (
-                        <p key={index} className="mb-2">
-                          {cleanLine}
-                        </p>
-                      ) : null;
-                    })} 
-                  </div>
+                  <div className="text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: formatMarkdown(actions) }} />
                 </CardContent>
               </Card>
             </motion.div>
