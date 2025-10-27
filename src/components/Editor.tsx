@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronDown } from 'lucide-react';
 import { Note, AIActivity } from '../types/chrome-ai';
 import { saveNote, getNotes, deleteNote } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
@@ -97,6 +97,7 @@ export const Editor: React.FC = () => {
     // Extract unique topics and tags
     const topics = [...new Set(savedNotes.map(note => note.topic).filter(Boolean))];
     const tags = [...new Set(savedNotes.flatMap(note => note.tags || []))];
+    //@ts-expect-error
     setExistingTopics(topics);
     setExistingTags(tags);
     

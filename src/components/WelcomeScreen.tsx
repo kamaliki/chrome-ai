@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, FileText, Languages, Camera, Target, Lightbulb, CheckCircle, Sparkles } from 'lucide-react';
+import { Brain, FileText, Languages, Camera, Target, CheckCircle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const WelcomeScreen: React.FC = () => {

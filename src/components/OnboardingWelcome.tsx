@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, FileText, Languages, Camera, Target, Lightbulb, CheckCircle, Sparkles, ArrowRight, Play, Lock, Download, Eye } from 'lucide-react';
+import { Brain, FileText, Languages, Camera, Target, CheckCircle, Sparkles, ArrowRight, Play, Lock, Download, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
