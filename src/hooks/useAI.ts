@@ -39,22 +39,29 @@ export const useAI = () => {
     setError(null);
     
     try {
-      if (!isAIAvailable()) {
-        return {result: text, explanation: 'Chrome AI not available'};
+      // @ts-ignore - Rewriter API is experimental
+      if (!('Rewriter' in self)) {
+        return {result: text, explanation: 'Chrome AI Rewriter not available'};
       }
       
-      const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that rewrites text and explains changes.',
-        //outputLanguage: 'en'
+      // Map tone to Chrome AI format
+      const toneMap: Record<string, string> = {
+        'professional': 'more-formal',
+        'casual': 'more-casual',
+        'formal': 'more-formal'
+      };
+      
+      // @ts-ignore
+      const rewriter = await self.Rewriter.create({
+        tone: toneMap[tone] || 'as-is',
+        format: 'as-is',
+        length: 'as-is'
       });
-      const response = await model.prompt(`Rewrite this text in a ${tone} tone and then explain what you changed and why:\n\nOriginal: ${text}`);
-      model.destroy();
       
-      // Split response into result and explanation
-      const parts = response.split('**Here\'s what I changed');
-      const result = parts[0].trim();
-      const explanation = parts.length > 1 ? '**Here\'s what I changed' + parts[1] : 'Text rewritten successfully';
+      const result = await rewriter.rewrite(text);
+      rewriter.destroy();
       
+      const explanation = `Text rewritten with ${tone} tone using Chrome AI Rewriter`;
       return {result, explanation};
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to rewrite';
