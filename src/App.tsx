@@ -13,14 +13,17 @@ import {
   Brain,
   Settings,
   Menu,
-  X
+  X,
+  Download,
+  FolderOpen
 } from 'lucide-react';
 import { Editor } from './components/Editor';
 import { SummarizerPanel } from './components/SummarizerPanel';
 import { Translator } from './components/Translator';
 import { OnboardingWelcome } from './components/OnboardingWelcome';
-import { initDB } from './utils/storage';
+import { initDB, getNotes, saveNote } from './utils/storage';
 import { isAIAvailable } from './utils/chrome-ai';
+import { Input } from '@/components/ui/input';
 
 const tabs = [
   { id: 'notes', label: 'My Notes', icon: Edit3, path: '/app/notes' },
@@ -58,6 +61,46 @@ function AppLayout() {
   };
 
   const isActiveTab = (path: string) => location.pathname === path;
+
+  const exportNotes = async () => {
+    const allNotes = await getNotes();
+    const exportData = {
+      notes: allNotes,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `focusflow-notes-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importNotes = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      
+      if (importData.notes && Array.isArray(importData.notes)) {
+        for (const note of importData.notes) {
+          await saveNote(note);
+        }
+        alert(`Imported ${importData.notes.length} notes successfully!`);
+      } else {
+        alert('Invalid file format');
+      }
+    } catch (error) {
+      alert('Error importing notes: ' + error);
+    }
+    
+    event.target.value = '';
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -97,6 +140,34 @@ function AppLayout() {
               {aiStatus === 'available' ? 'AI Ready' : 
                aiStatus === 'unavailable' ? 'AI Unavailable' : 'Checking AI...'}
             </Badge>
+
+            {/* Export/Import */}
+            <Button
+              onClick={exportNotes}
+              variant="outline"
+              size="sm"
+              className="gap-2 hidden sm:flex"
+            >
+              <Download size={16} />
+              Export
+            </Button>
+            
+            <Input
+              type="file"
+              accept=".json"
+              onChange={importNotes}
+              className="hidden"
+              id="import-notes"
+            />
+            <Button
+              onClick={() => document.getElementById('import-notes')?.click()}
+              variant="outline"
+              size="sm"
+              className="gap-2 hidden sm:flex"
+            >
+              <FolderOpen size={16} />
+              Import
+            </Button>
 
             {/* Theme Toggle */}
             <ModeToggle />
