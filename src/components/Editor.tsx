@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { Note, AIActivity } from '../types/chrome-ai';
 import { saveNote, getNotes, deleteNote } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
@@ -39,6 +39,7 @@ export const Editor: React.FC = () => {
   const [existingTopics, setExistingTopics] = useState<string[]>([]);
   const [existingTags, setExistingTags] = useState<string[]>([]);
   const [detectedLanguage, setDetectedLanguage] = useState<{language: string, confidence: number} | null>(null);
+  const [showMobileNotes, setShowMobileNotes] = useState(false);
 
   // Load AI activities for current note
   useEffect(() => {
@@ -342,9 +343,23 @@ export const Editor: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen relative">
+      {/* Mobile Sidebar Overlay */}
+      {showAiPanel && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setShowAiPanel(false)}
+        />
+      )}
+      
       {/* Notes Sidebar */}
-      <div className="w-64 h-full bg-muted/50 border-r p-4 overflow-y-auto">
+      <div className={`
+        w-64 h-full bg-muted/50 border-r p-2 md:p-4 overflow-y-auto
+        fixed md:relative z-50 md:z-auto
+        transform transition-transform duration-200 ease-in-out
+        ${showAiPanel ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        hidden md:block
+      `}>
         <Button
           onClick={createNewNote}
           className="w-full mb-4"
@@ -411,14 +426,14 @@ export const Editor: React.FC = () => {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 h-screen flex flex-col">
+      <div className="flex-1 h-screen flex flex-col md:ml-0">
         {/* Topic and Tags */}
-        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0">
+        <div className="border-b p-2 md:p-4 flex items-center gap-2 flex-shrink-0 overflow-x-auto">
           <Input
-            placeholder="Topic (e.g., Mathematics, History)"
+            placeholder="Topic"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            className="w-48"
+            className="w-32 md:w-48 text-sm"
             list="existing-topics"
           />
           <datalist id="existing-topics">
@@ -428,10 +443,10 @@ export const Editor: React.FC = () => {
           </datalist>
           
           <Input
-            placeholder="Tags (comma separated)"
+            placeholder="Tags"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            className="w-48"
+            className="w-32 md:w-48 text-sm"
             list="existing-tags"
           />
           <datalist id="existing-tags">
@@ -450,14 +465,15 @@ export const Editor: React.FC = () => {
         </div>
         
         {/* Toolbar */}
-        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0 flex-wrap">
+        <div className="border-b p-2 md:p-4 flex items-center gap-1 md:gap-2 flex-shrink-0 flex-wrap">
           <Button
             onClick={handleSave}
             variant="default"
-            className="gap-2"
+            size="sm"
+            className="gap-1 md:gap-2"
           >
-            <Save size={16} />
-            Save
+            <Save size={14} />
+            <span className="hidden sm:inline">Save</span>
           </Button>
           
           {/* Multimodal Input */}
@@ -473,11 +489,11 @@ export const Editor: React.FC = () => {
               onClick={() => document.getElementById('image-upload')?.click()}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-1"
               disabled={isLoading}
             >
-              <Image size={16} />
-              Image
+              <Image size={14} />
+              <span className="hidden sm:inline">Image</span>
             </Button>
             
 
@@ -498,20 +514,20 @@ export const Editor: React.FC = () => {
               }}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-1"
             >
-              {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              {isSpeaking ? 'Stop' : 'Speak'}
+              {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              <span className="hidden sm:inline">{isSpeaking ? 'Stop' : 'Speak'}</span>
             </Button>
             
             <Button
               onClick={() => setShowAiPanel(!showAiPanel)}
               variant={showAiPanel ? "default" : "outline"}
               size="sm"
-              className="gap-2"
+              className="gap-1"
             >
-              <Clock size={16} />
-              AI History
+              <Clock size={14} />
+              <span className="hidden sm:inline">AI History</span>
             </Button>
           </div>
           
@@ -521,25 +537,27 @@ export const Editor: React.FC = () => {
                 onClick={handleRewrite}
                 disabled={isLoading}
                 variant="secondary"
-                className="gap-2"
+                size="sm"
+                className="gap-1"
               >
-                <Sparkles size={16} />
-                Rewrite
+                <Sparkles size={14} />
+                <span className="hidden sm:inline">Rewrite</span>
               </Button>
               
               <Button
                 onClick={handleCleanText}
                 disabled={isLoading}
                 variant="outline"
-                className="gap-2"
+                size="sm"
+                className="gap-1"
               >
-                <FileText size={16} />
-                Clean Text
+                <FileText size={14} />
+                <span className="hidden sm:inline">Clean</span>
               </Button>
               
               <div className="flex items-center gap-2">
                 <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                  <SelectTrigger className="w-24">
+                  <SelectTrigger className="w-16 md:w-24 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -553,10 +571,11 @@ export const Editor: React.FC = () => {
                   onClick={handleTranslate}
                   disabled={isLoading}
                   variant="outline"
-                  className="gap-2"
+                  size="sm"
+                  className="gap-1"
                 >
-                  <Languages size={16} />
-                  Translate
+                  <Languages size={14} />
+                  <span className="hidden sm:inline">Translate</span>
                 </Button>
               </div>
             </>
@@ -564,9 +583,9 @@ export const Editor: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex h-0">
+        <div className="flex-1 flex h-0 flex-col md:flex-row">
           {/* Main Editor */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Uploaded Images */}
             {uploadedImages.length > 0 && (
               <div className="p-4 border-b bg-muted/20">
@@ -604,7 +623,11 @@ export const Editor: React.FC = () => {
           
           {/* AI Activity Panel */}
           {showAiPanel && (
-            <div className="w-80 border-l bg-muted/30 flex flex-col">
+            <div className={`
+              w-full md:w-80 border-t md:border-t-0 md:border-l bg-muted/30 flex flex-col
+              fixed md:relative bottom-0 md:bottom-auto left-0 md:left-auto
+              h-1/2 md:h-full z-50 md:z-auto
+            `}>
               <div className="p-4 border-b bg-muted/20 flex-shrink-0">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Clock size={16} />
@@ -658,6 +681,78 @@ export const Editor: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Mobile Floating Action Button */}
+      <div className="md:hidden fixed bottom-4 right-4 z-50">
+        <AnimatePresence>
+          {showMobileNotes && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              className="mb-4 bg-card border rounded-lg shadow-lg max-h-80 w-64 overflow-hidden"
+            >
+              <div className="p-3 border-b bg-muted/20">
+                <h3 className="font-semibold text-sm">Notes</h3>
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                <Button
+                  onClick={() => {
+                    createNewNote();
+                    setShowMobileNotes(false);
+                  }}
+                  className="w-full m-2 gap-2"
+                  size="sm"
+                >
+                  <Plus size={16} />
+                  New Note
+                </Button>
+                
+                <div className="px-2 pb-2 space-y-1">
+                  {notes.map((note) => (
+                    <div
+                      key={note.id}
+                      className={`p-2 rounded cursor-pointer text-sm transition-colors ${
+                        currentNote?.id === note.id
+                          ? 'bg-primary/10 border border-primary'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => {
+                        setCurrentNote(note);
+                        setContent(note.content);
+                        setTopic(note.topic || '');
+                        setTags(note.tags?.join(', ') || '');
+                        setUploadedImages(note.images || []);
+                        setShowMobileNotes(false);
+                      }}
+                    >
+                      <div className="font-medium truncate">
+                        {note.content.split('\n')[0] || 'Untitled'}
+                      </div>
+                      {note.topic && (
+                        <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">
+                          {note.topic}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {new Date(note.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <Button
+          onClick={() => setShowMobileNotes(!showMobileNotes)}
+          size="lg"
+          className="rounded-full w-14 h-14 shadow-lg"
+        >
+          {showMobileNotes ? <ChevronDown size={24} /> : <List size={24} />}
+        </Button>
       </div>
     </div>
   );
