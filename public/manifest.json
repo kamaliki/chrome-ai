@@ -1,7 +1,7 @@
 {
-  "name": "FocusFlow",
-  "short_name": "FocusFlow",
-  "description": "Privacy-first productivity assistant with Chrome AI",
+  "name": "CBC Tutor",
+  "short_name": "CBC Tutor",
+  "description": "Privacy-first tutor and assistant with Chrome AI",
   "theme_color": "#3b82f6",
   "background_color": "#ffffff",
   "display": "standalone",

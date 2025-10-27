@@ -1,22 +1,26 @@
-# FocusFlow 🧠
+# CBC Tutor 🧠
 
-A privacy-first, offline-capable productivity and writing assistant that helps users stay focused, summarize their thoughts, rewrite messy notes, and track progress — all client-side with Chrome's built-in AI.
+A privacy-first AI tutoring assistant that helps students take notes, understand content, and test their knowledge — all powered by Chrome's built-in AI with secure local authentication.
 
 ## ✨ Features
 
-- **Focus Journal**: Minimal text editor with AI-powered proofreading, rewriting, and translation
-- **AI Summarizer**: Generate summaries, key insights, and next actions from your notes
-- **Multilingual Support**: Real-time translation using Chrome's Translator API
-- **Offline-First**: Works completely offline with PWA support
-- **Privacy-First**: All AI processing happens locally in your browser
+- **Smart Note Editor**: AI-powered text editing with rewriting, cleaning, and markdown formatting
+- **Language Detection**: Auto-detect text language with confidence levels using Chrome AI
+- **OCR Text Extraction**: Extract and clean text from images with AI formatting
+- **AI Summarization**: Generate summaries, insights, and action items with markdown support
+- **Understanding Quizzes**: Test comprehension with AI-generated questions and progress tracking
+- **Smart Translation**: Translate with auto-detection and confidence indicators
+- **Secure Authentication**: Local username/password protection with encrypted storage
+- **Export & Import**: Backup and sync notes across devices with JSON export
+- **Privacy-First**: All AI processing and data storage happens locally in your browser
 
 ## 🚀 Chrome AI APIs Used
 
 - **Summarizer API**: Generate concise summaries of notes and text
-- **Writer API**: Create motivational prompts and session recaps
+- **Writer API**: Create study prompts and clean extracted text
 - **Rewriter API**: Improve clarity and tone of selected text
 - **Translator API**: Translate content between multiple languages
-- **Language Detector API**: Auto-detect source language for translation
+- **Language Detector API**: Auto-detect source language with confidence levels
 
 ## 📋 Requirements
 
@@ -41,7 +45,7 @@ A privacy-first, offline-capable productivity and writing assistant that helps u
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd focusflow
+   cd cbc-tutor
    ```
 
 2. **Install dependencies**
@@ -76,33 +80,32 @@ npm test
 1. Open the app in Chrome
 2. Click the install icon in the address bar
 3. Follow the installation prompts
-4. Use FocusFlow as a standalone app
+4. Use CBC Tutor as a standalone app
 
 ## 🎯 Usage Guide
 
-### Focus Journal
+### Getting Started
+- Create a secure local account on first use
+- All data is encrypted and stored locally
+- Export/import notes to sync across devices
+
+### Smart Note Editor
 - Create and edit notes with autosave
-- Select text and use AI to rewrite or translate
-- All notes are stored locally in IndexedDB
+- Upload images to extract text with OCR
+- Select text to rewrite, clean, or translate
+- Auto-detect language with confidence levels
+- View AI activity history for each note
 
 ### AI Summarizer
 - Click on any note to generate AI summaries
-- Get key insights and suggested next actions
-- Summarize all daily notes at once
-
-### Focus Timer
-- Use the Pomodoro technique (25-minute sessions)
-- Get AI-generated motivational messages after sessions
-- Track daily progress and focus time
-
-### Daily Prompts
-- Generate focus questions, motivational messages, or reflection prompts
-- Save favorite prompts for later reference
-- Switch between different prompt types
+- Get markdown-formatted insights and action items
+- Take comprehension quizzes based on your notes
+- Track quiz performance over time
 
 ### Translator
 - Translate text between 10+ languages
-- Auto-detect source language
+- Auto-detect source language with confidence
+- Real-time language detection as you type
 - Copy translations with one click
 
 ## 🏗️ Architecture
@@ -110,28 +113,32 @@ npm test
 ```
 src/
 ├── components/          # React components
-│   ├── Editor.tsx      # Main note editor
-│   ├── SummarizerPanel.tsx
-│   ├── Timer.tsx       # Pomodoro timer
-│   ├── PromptGenerator.tsx
-│   └── Translator.tsx
+│   ├── Editor.tsx      # Smart note editor with AI features
+│   ├── SummarizerPanel.tsx # AI summarization and quizzes
+│   ├── Translator.tsx  # Language translation
+│   ├── LoginForm.tsx   # Authentication interface
+│   └── OnboardingWelcome.tsx # Welcome screen
 ├── hooks/              # Custom React hooks
-│   ├── useAI.ts       # Chrome AI API wrapper
-│   └── useTimer.ts    # Timer functionality
+│   └── useAI.ts       # Chrome AI API wrapper
 ├── utils/              # Utility functions
 │   ├── chrome-ai.ts   # AI API helpers
-│   └── storage.ts     # IndexedDB operations
+│   ├── storage.ts     # IndexedDB operations
+│   ├── auth.ts        # Local authentication
+│   └── textFormatter.ts # Markdown formatting
 ├── types/              # TypeScript definitions
 └── styles/             # CSS and styling
 ```
 
 ## 🔒 Privacy & Security
 
+- **Local Authentication**: Secure username/password with SHA-256 hashing
+- **Encrypted Storage**: All user data encrypted locally
 - **No Data Collection**: All processing happens locally
 - **No Server Required**: Completely client-side application
 - **Offline Capable**: Works without internet connection
 - **Local Storage**: Notes stored in browser's IndexedDB
 - **No Tracking**: No analytics or external requests
+- **Export Control**: Users control their data with JSON export/import
 
 ## 🎨 Customization
 
@@ -140,10 +147,11 @@ src/
 - Automatic system theme detection
 - Manual theme toggle in header
 
-### Timer Duration
-- Default 25-minute Pomodoro sessions
-- Customizable in timer component
-- Progress tracking and statistics
+### Study Features
+- Organize notes by topics and tags
+- Auto-complete for existing topics/tags
+- Markdown formatting for rich text
+- Language detection with confidence levels
 
 ## 🐛 Troubleshooting
 
@@ -158,9 +166,14 @@ src/
 2. Check service worker registration
 3. Clear browser cache and try again
 
+### Authentication Issues
+1. Passwords are stored locally with encryption
+2. Clear browser data to reset account
+3. Use export/import to backup before reset
+
 ### Performance Issues
 1. Clear IndexedDB data in DevTools
-2. Reduce number of stored notes
+2. Export notes before clearing data
 3. Restart the application
 
 ## 🤝 Contributing

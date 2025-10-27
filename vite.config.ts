@@ -13,8 +13,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       },
       manifest: {
-        name: 'FocusFlow',
-        short_name: 'FocusFlow',
+        name: 'CBC Tutor',
+        short_name: 'CBC Tutor',
         description: 'Privacy-first productivity assistant with Chrome AI',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
