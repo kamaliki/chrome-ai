@@ -120,11 +120,11 @@ export const useAI = () => {
     
     try {
       if (!isAIAvailable()) {
-        return "What's one thing you want to focus on today?";
+        return "Oopsie, AI not available";
       }
       
       const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful teacher that helps students understand context amd meaning',
+        systemPrompt: 'You are a helpful teacher that helps students understand context and meaning',
         //outputLanguage: 'en'
       });
       const prompt = await model.prompt(context);
@@ -142,7 +142,7 @@ export const useAI = () => {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to generate prompt';
       setError(errorMsg);
-      return "What's one thing you want to focus on today?";
+      return "Oopsie !!!";
     } finally {
       setIsLoading(false);
     }
