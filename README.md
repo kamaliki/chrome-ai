@@ -66,7 +66,7 @@ A privacy-first AI tutoring assistant that helps students take notes, understand
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd cbc-tutor
+   cd chrome-ai
    ```
 
 2. **Run with Docker Compose**
@@ -83,7 +83,7 @@ A privacy-first AI tutoring assistant that helps students take notes, understand
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd cbc-tutor
+   cd chrome-ai
    ```
 
 2. **Install dependencies**
