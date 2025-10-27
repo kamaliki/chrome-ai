@@ -32,16 +32,6 @@ describe('Authentication', () => {
         salt: 'testsalt'
       };
       (localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(mockUser));
-      
-      // Mock crypto.subtle.digest
-      Object.defineProperty(global, 'crypto', {
-        value: {
-          subtle: {
-            digest: jest.fn().mockResolvedValue(new ArrayBuffer(32))
-          },
-          getRandomValues: jest.fn().mockReturnValue(new Uint8Array(16))
-        }
-      });
 
       const result = await loginUser('testuser', 'password123');
       

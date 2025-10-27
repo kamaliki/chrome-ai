@@ -1,3 +1,26 @@
+// Mock Web APIs first
+Object.defineProperty(global, 'TextEncoder', {
+  value: class TextEncoder {
+    encode(input: string) {
+      return new Uint8Array(Buffer.from(input, 'utf8'));
+    }
+  }
+});
+
+Object.defineProperty(global, 'crypto', {
+  value: {
+    subtle: {
+      digest: jest.fn().mockResolvedValue(new ArrayBuffer(32))
+    },
+    getRandomValues: jest.fn().mockImplementation((arr: Uint8Array) => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 256);
+      }
+      return arr;
+    })
+  }
+});
+
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 
