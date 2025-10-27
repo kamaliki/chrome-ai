@@ -259,7 +259,7 @@ export const SummarizerPanel: React.FC = () => {
                           </div>
                           {note.summaries && note.summaries.length > 0 && (
                             <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                              {note.summaries.length} summary{note.summaries.length > 1 ? 'ies' : ''}
+                              {note.summaries.length} summar{note.summaries.length > 1 ? 'ies' : 'y'}
                             </div>
                           )}
                         </div>

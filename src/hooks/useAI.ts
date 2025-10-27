@@ -76,7 +76,6 @@ export const useAI = () => {
         return text;
       }
       
-      const outputLang = targetLang === 'es' ? 'es' : targetLang === 'ja' ? 'ja' : 'en';
       const model = await createLanguageModel({
         systemPrompt: 'You are a helpful translator.',
         //outputLanguage: outputLang
@@ -123,7 +122,16 @@ export const useAI = () => {
       });
       const prompt = await model.prompt(context);
       model.destroy();
-      return prompt;
+      
+      // Clean unwanted AI response patterns
+      let cleanedPrompt = prompt
+        .replace(/^(Okay,|Here's|Sure,).*?\. /i, '')
+        .replace(/^.*?here's the cleaned.*?\./i, '')
+        .replace(/I hope this is helpful.*$/i, '')
+        .replace(/Let me know if you.*$/i, '')
+        .trim();
+      
+      return cleanedPrompt;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to generate prompt';
       setError(errorMsg);

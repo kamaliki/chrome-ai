@@ -36,6 +36,8 @@ export const Editor: React.FC = () => {
   const [aiActivities, setAiActivities] = useState<AIActivity[]>([]);
   const [showAiPanel, setShowAiPanel] = useState(true);
   const [isWritingNew, setIsWritingNew] = useState(false);
+  const [existingTopics, setExistingTopics] = useState<string[]>([]);
+  const [existingTags, setExistingTags] = useState<string[]>([]);
 
   // Load AI activities for current note
   useEffect(() => {
@@ -74,6 +76,13 @@ export const Editor: React.FC = () => {
   const loadNotes = async () => {
     const savedNotes = await getNotes();
     setNotes(savedNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    
+    // Extract unique topics and tags
+    const topics = [...new Set(savedNotes.map(note => note.topic).filter(Boolean))];
+    const tags = [...new Set(savedNotes.flatMap(note => note.tags || []))];
+    setExistingTopics(topics);
+    setExistingTags(tags);
+    
     if (savedNotes.length > 0) {
       setCurrentNote(savedNotes[0]);
       setContent(savedNotes[0].content);
@@ -368,13 +377,26 @@ export const Editor: React.FC = () => {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             className="w-48"
+            list="existing-topics"
           />
+          <datalist id="existing-topics">
+            {existingTopics.map((existingTopic) => (
+              <option key={existingTopic} value={existingTopic} />
+            ))}
+          </datalist>
+          
           <Input
             placeholder="Tags (comma separated)"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             className="w-48"
+            list="existing-tags"
           />
+          <datalist id="existing-tags">
+            {existingTags.map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+          </datalist>
         </div>
         
         {/* Toolbar */}
