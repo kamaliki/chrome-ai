@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  focusflow:
+  cbc-tutor:
     build: .
     ports:
       - "4173:4173"
