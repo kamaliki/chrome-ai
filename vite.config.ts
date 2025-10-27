@@ -1,8 +1,7 @@
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import path from "path"
+import path from 'path'
 
 export default defineConfig({
   plugins: [
@@ -36,10 +35,16 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+      '@': path.resolve(__dirname, './src')
+    }
   },
   server: {
-    https: false
+    https: true,
+    host: true, // allows access from LAN or domain during `vite dev`
+  },
+  preview: {
+    port: 4173,
+    host: true,
+    allowedHosts: ['chrome-ai.kamaliki.com', 'localhost', '127.0.0.1']
   }
 })

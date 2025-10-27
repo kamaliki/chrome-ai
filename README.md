@@ -52,7 +52,7 @@ A privacy-first AI tutoring assistant that helps students take notes, understand
 
 2. **Run with Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. **Access the application**
