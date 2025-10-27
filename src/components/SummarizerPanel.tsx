@@ -191,6 +191,16 @@ export const SummarizerPanel: React.FC = () => {
     return <WelcomeScreen />;
   }
 
+  // Group notes by topic
+  const notesByTopic = notes.reduce((acc, note) => {
+    const topic = note.topic || 'Uncategorized';
+    if (!acc[topic]) acc[topic] = [];
+    acc[topic].push(note);
+    return acc;
+  }, {} as Record<string, Note[]>);
+
+  const topics = Object.keys(notesByTopic).sort();
+
   return (
     <div className="h-full flex flex-col p-6 bg-background overflow-y-auto">
       <div className="mb-6">
@@ -209,42 +219,67 @@ export const SummarizerPanel: React.FC = () => {
             ) : (
               <FileText size={16} />
             )}
-            Summarize Selected Notes
+            Summarize Selected Note
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {notes.slice(0, 6).map(note => (
-            <motion.div
-              key={note.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <Card
-                className={`cursor-pointer transition-all ${
-                  selectedNote?.id === note.id
-                    ? 'border-primary bg-primary/5'
-                    : 'hover:bg-muted/50'
-                }`}
-                onClick={() => handleSummarize(note)}
-              >
-                <CardContent className="p-3">
-                  <div className="text-sm font-medium truncate mb-1">
-                    {note.content.split('\n')[0] || 'Untitled'}
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(note.updatedAt).toLocaleDateString()}
-                    </div>
-                    {note.summaries && note.summaries.length > 0 && (
-                      <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                        {note.summaries.length} summary{note.summaries.length > 1 ? 'ies' : ''}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+        {/* Topics and Notes */}
+        <div className="space-y-6">
+          {topics.map(topic => (
+            <div key={topic}>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                {topic}
+                <span className="text-sm text-muted-foreground">({notesByTopic[topic].length} notes)</span>
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {notesByTopic[topic].map(note => (
+                  <motion.div
+                    key={note.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        selectedNote?.id === note.id
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => handleSummarize(note)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="text-sm font-medium truncate mb-1">
+                          {note.content.split('\n')[0] || 'Untitled'}
+                        </div>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(note.updatedAt).toLocaleDateString()}
+                          </div>
+                          {note.summaries && note.summaries.length > 0 && (
+                            <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                              {note.summaries.length} summary{note.summaries.length > 1 ? 'ies' : ''}
+                            </div>
+                          )}
+                        </div>
+                        {note.tags && note.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {note.tags.slice(0, 3).map(tag => (
+                              <span key={tag} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                            {note.tags.length > 3 && (
+                              <span className="text-xs text-muted-foreground">+{note.tags.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

@@ -34,6 +34,8 @@ export interface Note {
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  topic?: string;
+  tags?: string[];
   summary?: string;
   images?: Array<{id: string, url: string, name: string}>;
   summaries?: Array<{

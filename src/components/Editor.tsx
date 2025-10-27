@@ -10,11 +10,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EditorWelcome } from './EditorWelcome';
+import { cleanOCRText } from '../utils/textFormatter';
 
 export const Editor: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [content, setContent] = useState('');
+  const [topic, setTopic] = useState('');
+  const [tags, setTags] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const { rewriteText, translateText, processMultimodalInput, speakResponse, generatePrompt, isLoading } = useAI();
 
@@ -64,6 +67,8 @@ export const Editor: React.FC = () => {
     if (savedNotes.length > 0) {
       setCurrentNote(savedNotes[0]);
       setContent(savedNotes[0].content);
+      setTopic(savedNotes[0].topic || '');
+      setTags(savedNotes[0].tags?.join(', ') || '');
     }
   };
 
@@ -73,11 +78,15 @@ export const Editor: React.FC = () => {
     const note: Note = currentNote ? {
       ...currentNote,
       content,
+      topic: topic.trim() || undefined,
+      tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
       images: uploadedImages,
       updatedAt: new Date()
     } : {
       id: Date.now().toString(),
       content,
+      topic: topic.trim() || undefined,
+      tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
       images: uploadedImages,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -86,7 +95,7 @@ export const Editor: React.FC = () => {
     await saveNote(note);
     setCurrentNote(note);
     loadNotes();
-  }, [content, currentNote, uploadedImages]);
+  }, [content, topic, tags, currentNote, uploadedImages]);
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
@@ -197,6 +206,8 @@ export const Editor: React.FC = () => {
   const createNewNote = () => {
     setCurrentNote(null);
     setContent('');
+    setTopic('');
+    setTags('');
     setUploadedImages([]);
   };
 
@@ -207,6 +218,8 @@ export const Editor: React.FC = () => {
     if (currentNote?.id === noteId) {
       setCurrentNote(null);
       setContent('');
+      setTopic('');
+      setTags('');
     }
     
     // Reload notes list
@@ -236,8 +249,11 @@ export const Editor: React.FC = () => {
       
       const extractedText = await processMultimodalInput({ image: file });
       
+      // Format the extracted text using local formatting function
+      const formattedText = cleanOCRText(extractedText);
+      
       // Replace the processing message with actual result and ensure it's saved
-      const analysisText = `AI Analysis: ${extractedText}\n\n---\n`;
+      const analysisText = `[Add a title above this line]\n\n${formattedText}\n\n---\n`;
       setContent(prev => {
         const newContent = prev.replace('[Processing image...]\n', analysisText);
         // Auto-save the note with extracted text and images
@@ -291,12 +307,19 @@ export const Editor: React.FC = () => {
                     onClick={() => {
                       setCurrentNote(note);
                       setContent(note.content);
+                      setTopic(note.topic || '');
+                      setTags(note.tags?.join(', ') || '');
                       setUploadedImages(note.images || []);
                     }}
                   >
                     <div className="text-sm font-medium truncate">
                       {note.content.split('\n')[0] || 'Untitled'}
                     </div>
+                    {note.topic && (
+                      <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">
+                        {note.topic}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground mt-1">
                       {new Date(note.updatedAt).toLocaleDateString()}
                     </div>
@@ -324,6 +347,22 @@ export const Editor: React.FC = () => {
 
       {/* Editor */}
       <div className="flex-1 h-screen flex flex-col">
+        {/* Topic and Tags */}
+        <div className="border-b p-4 flex items-center gap-2 flex-shrink-0">
+          <Input
+            placeholder="Topic (e.g., Mathematics, History)"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            className="w-48"
+          />
+          <Input
+            placeholder="Tags (comma separated)"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            className="w-48"
+          />
+        </div>
+        
         {/* Toolbar */}
         <div className="border-b p-4 flex items-center gap-2 flex-shrink-0 flex-wrap">
           <Button
@@ -462,7 +501,7 @@ export const Editor: React.FC = () => {
             )}
             
             {/* Text Area or Welcome Screen */}
-            {!content && !currentNote ? (
+            {!content && !currentNote && notes.length === 0 ? (
               <EditorWelcome />
             ) : (
               <Textarea
@@ -470,7 +509,7 @@ export const Editor: React.FC = () => {
                 onChange={(e) => setContent(e.target.value)}
                 onMouseUp={handleTextSelection}
                 onKeyUp={handleTextSelection}
-                placeholder="Start writing your thoughts..."
+                placeholder="First line: Your note title (required)&#10;&#10;Then write your content here..."
                 className="flex-1 resize text-lg max-h-screen m-1 p-1 border-none max-w-screen"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               />
