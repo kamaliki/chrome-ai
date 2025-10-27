@@ -77,7 +77,7 @@ export interface AppSettings {
 export interface AIActivity {
   id: string;
   timestamp: Date;
-  action: 'rewrite' | 'translate' | 'summarize' | 'image_ocr';
+  action: 'rewrite' | 'translate' | 'summarize' | 'image_ocr' | 'clean';
   originalText: string;
   resultText: string;
   explanation?: string;
