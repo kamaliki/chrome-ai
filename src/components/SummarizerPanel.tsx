@@ -205,7 +205,8 @@ export const SummarizerPanel: React.FC = () => {
   const topics = Object.keys(notesByTopic).sort();
 
   return (
-    <div className="h-full flex flex-col p-6 bg-background overflow-y-auto">
+    <div className="h-full flex bg-background">
+      <div className="flex-1 flex flex-col p-6 overflow-y-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-4">
           AI Summarizer
@@ -483,60 +484,62 @@ export const SummarizerPanel: React.FC = () => {
         </div>
       )}
       
-      {/* Quiz History for Selected Note */}
+
+      </div>
+      
+      {/* Quiz History Panel */}
       {selectedNote?.quizResults && selectedNote.quizResults.length > 0 && (
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="text-purple-500" size={20} />
-                Quiz History for This Note
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {selectedNote.quizResults.map((result) => {
-                  const percentage = Math.round((result.score / result.totalQuestions) * 100);
-                  return (
-                    <div key={result.id} className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50" onClick={() => { setReviewQuizResult(result); setShowQuizReview(true); }}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(result.timestamp).toLocaleDateString()} at {new Date(result.timestamp).toLocaleTimeString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold">
-                            {result.score}/{result.totalQuestions}
-                          </div>
-                          <div className={`text-sm ${
-                            percentage >= 80 ? 'text-green-600' :
-                            percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
-                            {percentage}%
-                          </div>
-                        </div>
+        <div className="w-80 border-l bg-muted/30 flex flex-col">
+          <div className="p-4 border-b bg-muted/20 flex-shrink-0">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Brain className="text-purple-500" size={20} />
+              Quiz History
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+              {selectedNote.quizResults.map((result) => {
+                const percentage = Math.round((result.score / result.totalQuestions) * 100);
+                return (
+                  <div key={result.id} className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50" onClick={() => { setReviewQuizResult(result); setShowQuizReview(true); }}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(result.timestamp).toLocaleDateString()} at {new Date(result.timestamp).toLocaleTimeString()}
+                        </p>
                       </div>
-                      
-                      <div className="space-y-2">
-                        {result.questions.map((question, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
-                            {question.isCorrect ? 
-                              <CheckCircle size={14} className="text-green-500" /> : 
-                              <XCircle size={14} className="text-red-500" />
-                            }
-                            <span className="text-muted-foreground">
-                              Question {index + 1}: {question.isCorrect ? 'Correct' : 'Incorrect'}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="text-right">
+                        <div className="text-lg font-bold">
+                          {result.score}/{result.totalQuestions}
+                        </div>
+                        <div className={`text-sm ${
+                          percentage >= 80 ? 'text-green-600' :
+                          percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {percentage}%
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    
+                    <div className="space-y-2">
+                      {result.questions.map((question, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm">
+                          {question.isCorrect ? 
+                            <CheckCircle size={14} className="text-green-500" /> : 
+                            <XCircle size={14} className="text-red-500" />
+                          }
+                          <span className="text-muted-foreground">
+                            Question {index + 1}: {question.isCorrect ? 'Correct' : 'Incorrect'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
       
