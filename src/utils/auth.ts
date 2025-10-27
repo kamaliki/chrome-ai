@@ -24,7 +24,7 @@ async function hashPassword(password: string, salt: string): Promise<string> {
 
 // Register a new user
 export async function registerUser(username: string, password: string): Promise<boolean> {
-  if (localStorage.getItem('focusflow-user')) {
+  if (localStorage.getItem('cbc-tutor-user')) {
     return false; // User already exists
   }
   
@@ -38,14 +38,14 @@ export async function registerUser(username: string, password: string): Promise<
     createdAt: new Date()
   };
   
-  localStorage.setItem('focusflow-user', JSON.stringify(user));
-  localStorage.setItem('focusflow-session', username);
+  localStorage.setItem('cbc-tutor-user', JSON.stringify(user));
+  localStorage.setItem('cbc-tutor-session', username);
   return true;
 }
 
 // Login user
 export async function loginUser(username: string, password: string): Promise<boolean> {
-  const userData = localStorage.getItem('focusflow-user');
+  const userData = localStorage.getItem('cbc-tutor-user');
   if (!userData) return false;
   
   const user: User = JSON.parse(userData);
@@ -53,7 +53,7 @@ export async function loginUser(username: string, password: string): Promise<boo
   
   const passwordHash = await hashPassword(password, user.salt);
   if (passwordHash === user.passwordHash) {
-    localStorage.setItem('focusflow-session', username);
+    localStorage.setItem('cbc-tutor-session', username);
     return true;
   }
   
@@ -62,20 +62,20 @@ export async function loginUser(username: string, password: string): Promise<boo
 
 // Check if user is logged in
 export function isLoggedIn(): boolean {
-  return !!localStorage.getItem('focusflow-session');
+  return !!localStorage.getItem('cbc-tutor-session');
 }
 
 // Get current user
 export function getCurrentUser(): string | null {
-  return localStorage.getItem('focusflow-session');
+  return localStorage.getItem('cbc-tutor-session');
 }
 
 // Logout user
 export function logoutUser(): void {
-  localStorage.removeItem('focusflow-session');
+  localStorage.removeItem('cbc-tutor-session');
 }
 
 // Check if user exists
 export function userExists(): boolean {
-  return !!localStorage.getItem('focusflow-user');
+  return !!localStorage.getItem('cbc-tutor-user');
 }

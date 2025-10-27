@@ -43,7 +43,7 @@ export const Editor: React.FC = () => {
   // Load AI activities for current note
   useEffect(() => {
     if (currentNote?.id) {
-      const savedActivities = localStorage.getItem(`focusflow-ai-activities-${currentNote.id}`);
+      const savedActivities = localStorage.getItem(`cbc-tutor-ai-activities-${currentNote.id}`);
       if (savedActivities) {
         try {
           const parsed = JSON.parse(savedActivities).map((activity: any) => ({
@@ -65,7 +65,7 @@ export const Editor: React.FC = () => {
   // Save AI activities for current note
   const saveAiActivities = (activities: AIActivity[]) => {
     if (currentNote?.id) {
-      localStorage.setItem(`focusflow-ai-activities-${currentNote.id}`, JSON.stringify(activities));
+      localStorage.setItem(`cbc-tutor-ai-activities-${currentNote.id}`, JSON.stringify(activities));
     }
     setAiActivities(activities);
   };

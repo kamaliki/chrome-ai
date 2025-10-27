@@ -88,7 +88,7 @@ function AppLayout() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `focusflow-notes-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `cbc-tutor-notes-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -137,7 +137,7 @@ function AppLayout() {
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-foreground">
-                FocusFlow
+                CBC Tutor
               </h1>
               <p className="text-sm text-muted-foreground">
                 Privacy-first AI tutor assistant
