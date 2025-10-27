@@ -157,7 +157,7 @@ function AppLayout() {
 
             {/* User Info */}
             {currentUser && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground hidden sm:flex">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground sm:flex">
                 <User size={14} />
                 <span>{currentUser}</span>
               </div>
