@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EditorWelcome } from './EditorWelcome';
+import { ModelLoadingAnimation } from './ModelLoadingAnimation';
 import { cleanOCRText, formatMarkdown } from '../utils/textFormatter';
 
 // Convert markdown to plain text for textarea display
@@ -169,43 +170,26 @@ export const Editor: React.FC = () => {
   const handleCleanText = async () => {
     if (!selectedText) return;
     const cleanedText = await generatePrompt(
-      `Clean and format this extracted text, fix HTML entities, organize mathematical notation, and make it readable: ${selectedText}`
+      `Clean and format this text, fix HTML entities, organize notation, and make it readable. Return ONLY the cleaned text with no explanations: ${selectedText}`
     );
     
-    // Extract only the key content, removing explanations
-    let keyContent = cleanedText;
-    
-    // Remove explanation sections
-    if (keyContent.includes('Key Improvements Made:')) {
-      keyContent = keyContent.split('Key Improvements Made:')[0].trim();
-    }
-    if (keyContent.includes('**Key Improvements Made:**')) {
-      keyContent = keyContent.split('**Key Improvements Made:**')[0].trim();
-    }
-    if (keyContent.includes('Changes made:')) {
-      keyContent = keyContent.split('Changes made:')[0].trim();
-    }
-    
-    // Convert markdown to plain text for editor
-    const plainText = markdownToPlainText(keyContent);
-    
-    const newContent = content.replace(selectedText, plainText);
+    const newContent = content.replace(selectedText, cleanedText);
     setContent(newContent);
     
     // Add to AI activities
     const activity: AIActivity = {
       id: Date.now().toString(),
       timestamp: new Date(),
-      action: 'rewrite',
+      action: 'clean',
       originalText: selectedText,
-      resultText: keyContent,
-      explanation: 'Cleaned and formatted extracted text'
+      resultText: cleanedText,
+      explanation: 'Cleaned and formatted text'
     };
     saveAiActivities([activity, ...aiActivities]);
     setShowAiPanel(true);
     
     setSelectedText('');
-    speakResponse('Text cleaned and formatted');
+    speakResponse('Text cleaned');
   };
 
   const handleTranslate = async () => {
@@ -316,11 +300,12 @@ export const Editor: React.FC = () => {
       
       const extractedText = await processMultimodalInput({ image: file });
       
-      // Format the extracted text using local formatting function
-      const formattedText = cleanOCRText(extractedText);
+      // Clean OCR text and convert to plain text for editor
+      const cleanedText = cleanOCRText(extractedText);
+      const plainText = markdownToPlainText(cleanedText);
       
       // Replace the processing message with actual result and ensure it's saved
-      const analysisText = `[Add a title above this line]\n\n${formattedText}\n\n---\n`;
+      const analysisText = `[Add a title above this line]\n\n${plainText}\n\n---\n`;
       setContent(prev => {
         const newContent = prev.replace('[Processing image...]\n', analysisText);
         // Auto-save the note with extracted text and images
@@ -345,6 +330,12 @@ export const Editor: React.FC = () => {
 
   return (
     <div className="flex h-screen relative">
+      {/* Model Loading Animation */}
+      <AnimatePresence>
+        {isLoading && (
+          <ModelLoadingAnimation message="Processing with AI..." />
+        )}
+      </AnimatePresence>
       {/* Mobile Sidebar Overlay */}
       {showAiPanel && (
         <div 
