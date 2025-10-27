@@ -1,19 +1,37 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import App from '../App'
+import { render, screen } from '@testing-library/react';
+import App from '../App';
 
-describe('App', () => {
-  it('renders the main heading', () => {
-    render(<App />)
-    expect(screen.getByText('FocusFlow')).toBeInTheDocument()
-  })
+// Mock react-router-dom
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useNavigate: () => jest.fn(),
+  useLocation: () => ({ pathname: '/' }),
+}));
 
-  it('renders navigation tabs', () => {
-    render(<App />)
-    expect(screen.getByText('Focus Journal')).toBeInTheDocument()
-    expect(screen.getByText('AI Summarizer')).toBeInTheDocument()
-    expect(screen.getByText('Focus Timer')).toBeInTheDocument()
-    expect(screen.getByText('Daily Prompts')).toBeInTheDocument()
-    expect(screen.getByText('Translator')).toBeInTheDocument()
-  })
-})
+describe('CBC Tutor App', () => {
+  beforeEach(() => {
+    // Mock user not logged in
+    (window.localStorage.getItem as jest.Mock).mockReturnValue(null);
+  });
+
+  it('renders the welcome page when not authenticated', () => {
+    render(<App />);
+    expect(screen.getByText('Welcome to CBC Tutor')).toBeInTheDocument();
+  });
+
+  it('shows app features on welcome page', () => {
+    render(<App />);
+    expect(screen.getByText('Smart Note Editor')).toBeInTheDocument();
+    expect(screen.getByText('Language Detection')).toBeInTheDocument();
+    expect(screen.getByText('AI Summarization')).toBeInTheDocument();
+    expect(screen.getByText('Understanding Quizzes')).toBeInTheDocument();
+    expect(screen.getByText('Smart Translation')).toBeInTheDocument();
+    expect(screen.getByText('Secure Authentication')).toBeInTheDocument();
+  });
+
+  it('shows get started button', () => {
+    render(<App />);
+    expect(screen.getByText('Get Started')).toBeInTheDocument();
+  });
+});

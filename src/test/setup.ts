@@ -1,34 +1,61 @@
-import { beforeAll, vi } from 'vitest'
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
 
-// Mock Chrome AI APIs for testing
+afterEach(() => {
+  cleanup();
+});
+
+// Mock Chrome AI APIs
 beforeAll(() => {
   Object.defineProperty(window, 'ai', {
     value: {
       summarizer: {
-        create: vi.fn().mockResolvedValue({
-          summarize: vi.fn().mockResolvedValue('Test summary'),
-          destroy: vi.fn(),
+        create: jest.fn().mockResolvedValue({
+          summarize: jest.fn().mockResolvedValue('Test summary'),
+          destroy: jest.fn(),
         }),
       },
       writer: {
-        create: vi.fn().mockResolvedValue({
-          write: vi.fn().mockResolvedValue('Test generated content'),
-          destroy: vi.fn(),
+        create: jest.fn().mockResolvedValue({
+          write: jest.fn().mockResolvedValue('Test generated content'),
+          destroy: jest.fn(),
         }),
       },
       rewriter: {
-        create: vi.fn().mockResolvedValue({
-          rewrite: vi.fn().mockResolvedValue('Test rewritten content'),
-          destroy: vi.fn(),
+        create: jest.fn().mockResolvedValue({
+          rewrite: jest.fn().mockResolvedValue('Test rewritten content'),
+          destroy: jest.fn(),
         }),
       },
       translator: {
-        create: vi.fn().mockResolvedValue({
-          translate: vi.fn().mockResolvedValue('Test translated content'),
-          destroy: vi.fn(),
+        create: jest.fn().mockResolvedValue({
+          translate: jest.fn().mockResolvedValue('Test translated content'),
+          destroy: jest.fn(),
         }),
       },
     },
     writable: true,
-  })
-})
+  });
+
+  // Mock LanguageDetector
+  Object.defineProperty(window, 'LanguageDetector', {
+    value: {
+      create: jest.fn().mockResolvedValue({
+        detect: jest.fn().mockResolvedValue([{ detectedLanguage: 'en', confidence: 0.95 }]),
+        destroy: jest.fn()
+      })
+    },
+    writable: true,
+  });
+
+  // Mock localStorage
+  Object.defineProperty(window, 'localStorage', {
+    value: {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+    },
+    writable: true,
+  });
+});
