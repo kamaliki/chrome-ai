@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronDown } from 'lucide-react';
+import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronDown, RotateCcw } from 'lucide-react';
 import { Note, AIActivity } from '../types/chrome-ai';
 import { saveNote, getNotes, deleteNote } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
@@ -675,7 +675,21 @@ export const Editor: React.FC = () => {
                         </div>
                         
                         <div>
-                          <strong>Result:</strong>
+                          <div className="flex items-center justify-between mb-1">
+                            <strong>Result:</strong>
+                            <Button
+                              onClick={() => {
+                                const plainText = markdownToPlainText(activity.resultText);
+                                setContent(plainText);
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 h-6 px-2 text-xs"
+                            >
+                              <RotateCcw size={12} />
+                              Recover
+                            </Button>
+                          </div>
                           <div className="bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-100 p-2 rounded text-xs mt-1" dangerouslySetInnerHTML={{ __html: formatMarkdown(activity.resultText) }} />
                         </div>
                         

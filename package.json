@@ -3,7 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -31,6 +30,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.4",
+    "recharts": "^2.15.4",
     "shadcn-ui": "^0.9.5",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7"

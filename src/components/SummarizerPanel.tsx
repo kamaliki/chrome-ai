@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Lightbulb, Target, Loader2, Brain, CheckCircle, XCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FileText, Lightbulb, Target, Loader2, Brain, CheckCircle, XCircle, TrendingUp, BarChart3 } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
 import { getNotes, saveNote } from '../utils/storage';
 import { Note } from '../types/chrome-ai';
@@ -32,6 +32,8 @@ export const SummarizerPanel: React.FC = () => {
   const [quizComplete, setQuizComplete] = useState(false);
   const [showQuizReview, setShowQuizReview] = useState(false);
   const [reviewQuizResult, setReviewQuizResult] = useState<any>(null);
+  const [showMobileQuizPanel, setShowMobileQuizPanel] = useState(false);
+  const [showProgressChart, setShowProgressChart] = useState(false);
   const { summarizeText, generatePrompt, isLoading } = useAI();
 
   useEffect(() => {
@@ -487,14 +489,25 @@ export const SummarizerPanel: React.FC = () => {
 
       </div>
       
-      {/* Quiz History Panel */}
+      {/* Quiz History Panel - Desktop */}
       {selectedNote?.quizResults && selectedNote.quizResults.length > 0 && (
-        <div className="w-80 border-l bg-muted/30 flex flex-col">
+        <div className="hidden md:flex w-80 border-l bg-muted/30 flex-col">
           <div className="p-4 border-b bg-muted/20 flex-shrink-0">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Brain className="text-purple-500" size={20} />
-              Quiz History
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Brain className="text-purple-500" size={20} />
+                Quiz History
+              </h3>
+              <Button
+                onClick={() => setShowProgressChart(true)}
+                variant="outline"
+                size="sm"
+                className="gap-1"
+              >
+                <BarChart3 size={16} />
+                Progress
+              </Button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4">
@@ -540,6 +553,66 @@ export const SummarizerPanel: React.FC = () => {
               })}
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Mobile Quiz History Floating Button */}
+      {selectedNote?.quizResults && selectedNote.quizResults.length > 0 && (
+        <div className="md:hidden fixed bottom-4 right-4 z-50">
+          <Button
+            onClick={() => setShowMobileQuizPanel(!showMobileQuizPanel)}
+            size="lg"
+            className="rounded-full w-14 h-14 shadow-lg"
+          >
+            <Brain size={24} />
+          </Button>
+          
+          <AnimatePresence>
+            {showMobileQuizPanel && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                className="absolute bottom-16 right-0 bg-card border rounded-lg shadow-lg max-h-80 w-72 overflow-hidden"
+              >
+                <div className="p-3 border-b bg-muted/20">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <Brain className="text-purple-500" size={16} />
+                    Quiz History
+                  </h3>
+                </div>
+                <div className="max-h-60 overflow-y-auto p-3">
+                  <div className="space-y-3">
+                    {selectedNote.quizResults.map((result) => {
+                      const percentage = Math.round((result.score / result.totalQuestions) * 100);
+                      return (
+                        <div key={result.id} className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50" onClick={() => { setReviewQuizResult(result); setShowQuizReview(true); setShowMobileQuizPanel(false); }}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(result.timestamp).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold">
+                                {result.score}/{result.totalQuestions}
+                              </div>
+                              <div className={`text-xs ${
+                                percentage >= 80 ? 'text-green-600' :
+                                percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {percentage}%
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
       
@@ -610,6 +683,85 @@ export const SummarizerPanel: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Progress Chart Dialog */}
+      <Dialog open={showProgressChart} onOpenChange={setShowProgressChart}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Quiz Progress Chart</DialogTitle>
+          </DialogHeader>
+          
+          {selectedNote?.quizResults && selectedNote.quizResults.length > 0 && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 size={20} className="text-blue-500" />
+                    Quiz Performance Over Time
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <div className="grid grid-cols-1 gap-4">
+                      {selectedNote.quizResults.slice().reverse().map((result, index) => {
+                        const percentage = Math.round((result.score / result.totalQuestions) * 100);
+                        return (
+                          <div key={result.id} className="flex items-center gap-4">
+                            <div className="text-sm text-muted-foreground w-20">
+                              Quiz {index + 1}
+                            </div>
+                            <div className="flex-1 bg-muted rounded-full h-4 relative">
+                              <div 
+                                className={`h-4 rounded-full transition-all ${
+                                  percentage >= 80 ? 'bg-green-500' :
+                                  percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+                                {percentage}%
+                              </span>
+                            </div>
+                            <div className="text-sm font-medium w-16">
+                              {result.score}/{result.totalQuestions}
+                            </div>
+                            <div className="text-xs text-muted-foreground w-24">
+                              {new Date(result.timestamp).toLocaleDateString()}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+                <div className="px-6 pb-6">
+                  <div className="flex items-center gap-2 text-sm">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <span className="font-medium">
+                      Average Score: {Math.round(
+                        selectedNote.quizResults.reduce((sum, result) => 
+                          sum + (result.score / result.totalQuestions), 0
+                        ) / selectedNote.quizResults.length * 100
+                      )}%
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground text-sm mt-1">
+                    Showing performance for {selectedNote.quizResults.length} quiz attempts
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Mobile Quiz Panel Overlay */}
+      {showMobileQuizPanel && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setShowMobileQuizPanel(false)}
+        />
+      )}
     </div>
   );
 };
