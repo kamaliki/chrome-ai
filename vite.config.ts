@@ -39,7 +39,7 @@ export default defineConfig({
     }
   },
   server: {
-    https: true,
+    https: false,
     host: true, // allows access from LAN or domain during `vite dev`
   },
   preview: {
