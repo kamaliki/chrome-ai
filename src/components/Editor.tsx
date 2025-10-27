@@ -170,8 +170,22 @@ export const Editor: React.FC = () => {
       `Clean and format this extracted text, fix HTML entities, organize mathematical notation, and make it readable: ${selectedText}`
     );
     
+    // Extract only the key content, removing explanations
+    let keyContent = cleanedText;
+    
+    // Remove explanation sections
+    if (keyContent.includes('Key Improvements Made:')) {
+      keyContent = keyContent.split('Key Improvements Made:')[0].trim();
+    }
+    if (keyContent.includes('**Key Improvements Made:**')) {
+      keyContent = keyContent.split('**Key Improvements Made:**')[0].trim();
+    }
+    if (keyContent.includes('Changes made:')) {
+      keyContent = keyContent.split('Changes made:')[0].trim();
+    }
+    
     // Convert markdown to plain text for editor
-    const plainText = markdownToPlainText(cleanedText);
+    const plainText = markdownToPlainText(keyContent);
     
     const newContent = content.replace(selectedText, plainText);
     setContent(newContent);
@@ -182,7 +196,7 @@ export const Editor: React.FC = () => {
       timestamp: new Date(),
       action: 'rewrite',
       originalText: selectedText,
-      resultText: cleanedText,
+      resultText: keyContent,
       explanation: 'Cleaned and formatted extracted text'
     };
     saveAiActivities([activity, ...aiActivities]);

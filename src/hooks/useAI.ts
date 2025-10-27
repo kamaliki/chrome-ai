@@ -12,16 +12,22 @@ export const useAI = () => {
     setError(null);
     
     try {
-      if (!isAIAvailable()) {
+      // @ts-ignore - Summarizer API is experimental
+      if (!('Summarizer' in self)) {
         return `Summary: ${text.slice(0, 100)}...`;
       }
       
-      const model = await createLanguageModel({
-        systemPrompt: 'You are a helpful assistant that creates concise summaries.',
-        // Removed outputLanguage as it is not part of the expected type
+      // @ts-ignore
+      const summarizer = await self.Summarizer.create({
+        type: "key-points",
+        expectedInputLanguages: ["en", "ja", "es"],
+        outputLanguage: "en",
+        expectedContextLanguages: ["en"],
+        sharedContext: "These are requests to summarize study notes and educational content for students."
       });
-      const summary = await model.prompt(`Summarize this text: ${text}`);
-      model.destroy();
+      
+      const summary = await summarizer.summarize(text);
+      summarizer.destroy();
       return summary;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to summarize';
