@@ -42,6 +42,25 @@ A privacy-first AI tutoring assistant that helps students take notes, understand
 
 ## 🛠️ Setup & Installation
 
+### Option 1: Docker (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd cbc-tutor
+   ```
+
+2. **Run with Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access the application**
+   - Open Chrome and navigate to `http://localhost:4173`
+   - Enable Chrome AI features (see requirements above)
+
+### Option 2: Manual Installation
+
 1. **Clone the repository**
    ```bash
    git clone <repository-url>

@@ -615,7 +615,7 @@ export const Editor: React.FC = () => {
                 onMouseUp={handleTextSelection}
                 onKeyUp={handleTextSelection}
                 placeholder="First line: Your note title (required)&#10;&#10;Then write your content here..."
-                className="flex-1 resize text-lg max-h-screen m-1 p-1 border-none max-w-screen"
+                className="flex-1 resize text-lg max-h-screen m-1 p-4 border-none max-w-screen"
                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
               />
             )}
