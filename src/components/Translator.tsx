@@ -28,8 +28,9 @@ export const Translator: React.FC = () => {
   const [targetLanguage, setTargetLanguage] = useState('sw-KE');
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const { translateText, isLoading } = useAI();
+  const { translateText, detectLanguage, isLoading } = useAI();
   const [translationHistory, setTranslationHistory] = useState<TranslationHistory[]>([]);
+  const [detectedLanguage, setDetectedLanguage] = useState<{language: string, confidence: number} | null>(null);
 
   // Load translation history on component mount
   React.useEffect(() => {
@@ -42,6 +43,21 @@ export const Translator: React.FC = () => {
       setTranslationHistory(parsed);
     }
   }, []);
+
+  // Detect language when input changes
+  React.useEffect(() => {
+    const detectInputLanguage = async () => {
+      if (inputText.trim().length > 10) {
+        const result = await detectLanguage(inputText);
+        setDetectedLanguage(result);
+      } else {
+        setDetectedLanguage(null);
+      }
+    };
+    
+    const timeoutId = setTimeout(detectInputLanguage, 500);
+    return () => clearTimeout(timeoutId);
+  }, [inputText, detectLanguage]);
 
   const handleTranslate = async () => {
     if (!inputText.trim()) return;
@@ -97,7 +113,14 @@ export const Translator: React.FC = () => {
         <div className="flex items-center justify-center gap-4 mb-6">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground">
-              Auto-detect
+              {detectedLanguage ? (
+                <div className="flex items-center gap-1">
+                  <span>{detectedLanguage.language.toUpperCase()}</span>
+                  <span className="text-xs text-green-600">({Math.round(detectedLanguage.confidence * 100)}%)</span>
+                </div>
+              ) : (
+                'Auto-detect'
+              )}
             </span>
           </div>
           

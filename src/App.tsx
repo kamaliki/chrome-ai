@@ -15,7 +15,9 @@ import {
   Menu,
   X,
   Download,
-  FolderOpen
+  FolderOpen,
+  LogOut,
+  User
 } from 'lucide-react';
 import { Editor } from './components/Editor';
 import { SummarizerPanel } from './components/SummarizerPanel';
@@ -24,6 +26,8 @@ import { OnboardingWelcome } from './components/OnboardingWelcome';
 import { initDB, getNotes, saveNote } from './utils/storage';
 import { isAIAvailable } from './utils/chrome-ai';
 import { Input } from '@/components/ui/input';
+import { LoginForm } from './components/LoginForm';
+import { isLoggedIn, getCurrentUser, logoutUser } from './utils/auth';
 
 const tabs = [
   { id: 'notes', label: 'My Notes', icon: Edit3, path: '/app/notes' },
@@ -35,7 +39,11 @@ function WelcomePage() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/app');
+    if (isLoggedIn()) {
+      navigate('/app');
+    } else {
+      navigate('/login');
+    }
   };
 
   return <OnboardingWelcome onGetStarted={handleGetStarted} />;
@@ -46,6 +54,12 @@ function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+
+  const handleLogout = () => {
+    logoutUser();
+    window.location.href = '/';
+  };
 
   useEffect(() => {
     initializeApp();
@@ -141,6 +155,14 @@ function AppLayout() {
                aiStatus === 'unavailable' ? 'AI Unavailable' : 'Checking AI...'}
             </Badge>
 
+            {/* User Info */}
+            {currentUser && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground hidden sm:flex">
+                <User size={14} />
+                <span>{currentUser}</span>
+              </div>
+            )}
+
             {/* Export/Import */}
             <Button
               onClick={exportNotes}
@@ -167,6 +189,17 @@ function AppLayout() {
             >
               <FolderOpen size={16} />
               Import
+            </Button>
+
+            {/* Logout */}
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="gap-2 hidden sm:flex"
+            >
+              <LogOut size={16} />
+              Logout
             </Button>
 
             {/* Theme Toggle */}
@@ -254,13 +287,32 @@ function AppLayout() {
   );
 }
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(isLoggedIn());
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <Router>
         <Routes>
           <Route path="/" element={<WelcomePage />} />
-          <Route path="/app" element={<AppLayout />}>
+          <Route path="/login" element={<LoginForm onLogin={() => window.location.href = '/app'} />} />
+          <Route path="/app" element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }>
             <Route index element={<Navigate to="/app/notes" replace />} />
             <Route path="notes" element={<Editor />} />
             <Route path="summary" element={<SummarizerPanel />} />

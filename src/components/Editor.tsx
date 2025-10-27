@@ -28,7 +28,7 @@ export const Editor: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState('');
   const [selectedText, setSelectedText] = useState('');
-  const { rewriteText, translateText, processMultimodalInput, speakResponse, generatePrompt, isLoading } = useAI();
+  const { rewriteText, translateText, processMultimodalInput, speakResponse, generatePrompt, detectLanguage, isLoading } = useAI();
 
   const [uploadedImages, setUploadedImages] = useState<Array<{id: string, url: string, name: string}>>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -38,6 +38,7 @@ export const Editor: React.FC = () => {
   const [isWritingNew, setIsWritingNew] = useState(false);
   const [existingTopics, setExistingTopics] = useState<string[]>([]);
   const [existingTags, setExistingTags] = useState<string[]>([]);
+  const [detectedLanguage, setDetectedLanguage] = useState<{language: string, confidence: number} | null>(null);
 
   // Load AI activities for current note
   useEffect(() => {
@@ -72,6 +73,21 @@ export const Editor: React.FC = () => {
   useEffect(() => {
     loadNotes();
   }, []);
+
+  // Detect language when content changes
+  useEffect(() => {
+    const detectContentLanguage = async () => {
+      if (content.trim().length > 20) {
+        const result = await detectLanguage(content);
+        setDetectedLanguage(result);
+      } else {
+        setDetectedLanguage(null);
+      }
+    };
+    
+    const timeoutId = setTimeout(detectContentLanguage, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [content, detectLanguage]);
 
   const loadNotes = async () => {
     const savedNotes = await getNotes();
@@ -207,19 +223,31 @@ export const Editor: React.FC = () => {
     utterance.rate = 0.9;
     utterance.pitch = 1;
     utterance.volume = 0.8;
-    // Set language code
-    if (lang === 'es') utterance.lang = 'es-ES';
-    else if (lang === 'ja') utterance.lang = 'ja-JP';
-    else utterance.lang = 'en-US';
+    
+    // Map language codes to locale codes
+    const langMap: Record<string, string> = {
+      'es': 'es-ES',
+      'ja': 'ja-JP', 
+      'fr': 'fr-FR',
+      'de': 'de-DE',
+      'sw-KE': 'sw-KE', // Swahili (Kenya)
+      'sw': 'sw-KE'
+    };
+    
+    utterance.lang = langMap[lang] || 'en-US';
     
     // Find voice for the specific language
     const voices = window.speechSynthesis.getVoices();
     const targetVoice = voices.find(voice => 
-      voice.lang.startsWith(lang)
+      voice.lang.startsWith(lang) || voice.lang.startsWith(langMap[lang] || '')
     );
     
     if (targetVoice) {
       utterance.voice = targetVoice;
+    } else if (lang === 'sw-KE' || lang === 'sw') {
+      // Fallback to English for Swahili since it's rarely available
+      utterance.lang = 'en-US';
+      console.log('Swahili voice not available, using English fallback');
     }
     
     window.speechSynthesis.speak(utterance);
@@ -397,6 +425,14 @@ export const Editor: React.FC = () => {
               <option key={tag} value={tag} />
             ))}
           </datalist>
+          
+          {detectedLanguage && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Languages size={14} />
+              <span>{detectedLanguage.language.toUpperCase()}</span>
+              <span className="text-green-600">({Math.round(detectedLanguage.confidence * 100)}%)</span>
+            </div>
+          )}
         </div>
         
         {/* Toolbar */}

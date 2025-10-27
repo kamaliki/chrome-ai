@@ -257,6 +257,34 @@ export const useAI = () => {
     }
   }, []);
 
+  const detectLanguage = useCallback(async (text: string): Promise<{language: string, confidence: number} | null> => {
+    if (!text.trim()) return null;
+    
+    try {
+      // @ts-ignore - LanguageDetector API is experimental
+      if (!('LanguageDetector' in self)) {
+        return null;
+      }
+      
+      // @ts-ignore
+      const detector = await self.LanguageDetector.create();
+      const results = await detector.detect(text);
+      detector.destroy();
+      
+      if (results && results.length > 0) {
+        return {
+          language: results[0].detectedLanguage,
+          confidence: results[0].confidence
+        };
+      }
+      
+      return null;
+    } catch (err) {
+      console.log('Language detection failed:', err);
+      return null;
+    }
+  }, []);
+
   const speakResponse = useCallback((text: string) => {
     if (!text.trim()) return;
     
@@ -288,6 +316,7 @@ export const useAI = () => {
     processMultimodalInput,
     proofreadText,
     speakResponse,
+    detectLanguage,
     isLoading,
     error,
     isAIAvailable: isAIAvailable()
