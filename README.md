@@ -36,7 +36,7 @@ A privacy-first AI tutoring assistant that helps students take notes, understand
    - `#prompt-api-for-gemini-nano`
    - `#summarization-api-for-gemini-nano`
    - `#rewriter-api-for-gemini-nano`
-   - `#translator-api-for-gemini-nano`
+   - `#translation-api`
 3. Restart Chrome
 4. Visit `chrome://components` and update "Optimization Guide On Device Model"
 
