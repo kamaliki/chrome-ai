@@ -8,7 +8,7 @@ export const WelcomeScreen: React.FC = () => {
     {
       icon: <FileText className="text-blue-500" size={24} />,
       title: "Smart Note Editor",
-      description: "Write and organize your thoughts with AI-powered assistance",
+      description: "Structured notes with titles, topics, tags, and AI recovery system",
       gradient: "from-blue-500/10 to-blue-600/10"
     },
     {
@@ -19,20 +19,20 @@ export const WelcomeScreen: React.FC = () => {
     },
     {
       icon: <Brain className="text-purple-500" size={24} />,
-      title: "AI Summarization",
-      description: "Generate summaries, insights, and action items from your notes",
+      title: "AI Summarization & Quizzes",
+      description: "Generate summaries and test understanding with progress tracking",
       gradient: "from-purple-500/10 to-purple-600/10"
     },
     {
       icon: <CheckCircle className="text-orange-500" size={24} />,
-      title: "Understanding Quizzes",
-      description: "Test your comprehension with AI-generated questions",
+      title: "Progress Analytics",
+      description: "Visual charts showing quiz performance and learning trends",
       gradient: "from-orange-500/10 to-orange-600/10"
     },
     {
       icon: <Languages className="text-pink-500" size={24} />,
-      title: "Multi-language Support",
-      description: "Translate content between 10+ languages instantly",
+      title: "Smart Translation",
+      description: "Multi-language support with translation history and auto-detection",
       gradient: "from-pink-500/10 to-pink-600/10"
     },
     {
@@ -74,7 +74,7 @@ export const WelcomeScreen: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="text-4xl font-bold text-foreground mb-4"
         >
-          Welcome to <span className="text-primary">FocusFlow</span>
+          Welcome to <span className="text-primary">CBC Tutor</span>
         </motion.h1>
         
         <motion.p
@@ -134,14 +134,18 @@ export const WelcomeScreen: React.FC = () => {
         className="mt-12 text-center"
       >
         <p className="text-muted-foreground mb-4">Ready to get started?</p>
-        <div className="flex items-center justify-center gap-4 text-sm">
+        <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span>Create your first note in the Editor</span>
+            <span>Create structured notes with titles & topics</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <span>Or upload an image to extract text</span>
+            <span>Take AI-generated quizzes to test understanding</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Track your learning progress over time</span>
           </div>
         </div>
       </motion.div>
