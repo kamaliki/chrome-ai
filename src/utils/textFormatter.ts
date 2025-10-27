@@ -7,7 +7,7 @@ marked.setOptions({
 });
 
 export function formatMarkdown(markdown: string): string {
-  return marked.parse(markdown);
+  return marked.parse(markdown) as string;
 }
 
 export const cleanOCRText = (text: string): string => {
