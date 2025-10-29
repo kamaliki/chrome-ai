@@ -22,6 +22,8 @@ interface QuizQuestion {
 export const SummarizerPanel: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'simple' | 'graphical'>('simple');
   const [summary, setSummary] = useState('');
   const [insights, setInsights] = useState('');
   const [actions, setActions] = useState('');
@@ -34,6 +36,7 @@ export const SummarizerPanel: React.FC = () => {
   const [reviewQuizResult, setReviewQuizResult] = useState<any>(null);
   const [showMobileQuizPanel, setShowMobileQuizPanel] = useState(false);
   const [showProgressChart, setShowProgressChart] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const { summarizeText, generatePrompt, isLoading } = useAI();
 
   useEffect(() => {
@@ -192,6 +195,21 @@ export const SummarizerPanel: React.FC = () => {
     setActions(dailyActions);
   };
 
+  const getTopics = () => {
+    const topics: { [key: string]: Note[] } = {};
+    notes.forEach(note => {
+      const topic = note.topic || 'Uncategorized';
+      if (!topics[topic]) topics[topic] = [];
+      topics[topic].push(note);
+    });
+    return topics;
+  };
+
+  const getFilteredNotes = () => {
+    if (!selectedTopic) return notes;
+    return notes.filter(note => (note.topic || 'Uncategorized') === selectedTopic);
+  };
+
 
 
   if (notes.length === 0) {
@@ -206,29 +224,135 @@ export const SummarizerPanel: React.FC = () => {
             AI Summarizer
           </h2>
 
-          <div className="flex gap-2 mb-4">
-            <Button
-              onClick={summarizeAllNotes}
-              disabled={isLoading || notes.length === 0}
-              className="gap-2"
-            >
-              {isLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <FileText size={16} />
-              )}
-              Summarize Selected Note
-            </Button>
-          </div>
+          {!selectedTopic ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select a Topic</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(getTopics()).map(([topic, topicNotes]) => (
+                  <div
+                    key={topic}
+                    className="p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setSelectedTopic(topic)}
+                  >
+                    <h4 className="font-medium mb-2">{topic}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {topicNotes.length} note{topicNotes.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setSelectedTopic(null); setSelectedNote(null); }}
+                  >
+                    ← Back to Topics
+                  </Button>
+                  <h3 className="text-lg font-semibold">{selectedTopic}</h3>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'simple' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('simple')}
+                  >
+                    Simple View
+                  </Button>
+                  <Button
+                    variant={viewMode === 'graphical' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setViewMode('graphical')}
+                  >
+                    Graph View
+                  </Button>
+                </div>
+              </div>
 
-          <TreeVisualization
-            notes={notes}
-            selectedNote={selectedNote}
-            onNoteSelect={handleSummarize}
-          />
+              {viewMode === 'graphical' ? (
+                <TreeVisualization
+                  notes={getFilteredNotes()}
+                  selectedNote={selectedNote}
+                  onNoteSelect={handleSummarize}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {(() => {
+                    const tree: any = {};
+                    getFilteredNotes().forEach(note => {
+                      const tags = note.tags || [];
+                      let current = tree;
+                      tags.forEach(tag => {
+                        if (!current[tag]) current[tag] = { notes: [], children: {} };
+                        current = current[tag].children;
+                      });
+                      if (!current._notes) current._notes = [];
+                      current._notes.push(note);
+                    });
+                    
+                    const renderTree = (node: any, level = 0, parentPath = '') => {
+                      return Object.entries(node).map(([key, value]: [string, any]) => {
+                        if (key === '_notes') {
+                          return value.map((note: Note) => (
+                            <div
+                              key={note.id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedNote?.id === note.id ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+                              }`}
+                              style={{ marginLeft: `${level * 20}px` }}
+                              onClick={() => handleSummarize(note)}
+                            >
+                              <h4 className="font-medium">{note.title || 'Untitled'}</h4>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {new Date(note.updatedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          ));
+                        }
+                        const nodePath = `${parentPath}/${key}`;
+                        const isExpanded = expandedNodes.has(nodePath);
+                        return (
+                          <div key={key}>
+                            <div 
+                              className="font-medium text-sm text-muted-foreground mb-2 cursor-pointer hover:text-foreground" 
+                              style={{ marginLeft: `${level * 20}px` }}
+                              onClick={() => {
+                                const newExpanded = new Set(expandedNodes);
+                                if (isExpanded) {
+                                  newExpanded.delete(nodePath);
+                                } else {
+                                  newExpanded.add(nodePath);
+                                }
+                                setExpandedNodes(newExpanded);
+                              }}
+                            >
+                              {isExpanded ? '📂' : '📁'} {key}
+                            </div>
+                            {isExpanded && (
+                              <>
+                                {renderTree(value.children, level + 1, nodePath)}
+                                {value.notes && renderTree({ _notes: value.notes }, level + 1, nodePath)}
+                              </>
+                            )}
+                          </div>
+                        );
+                      });
+                    };
+                    
+                    return renderTree(tree);
+                  })()
+                  }
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <SummaryCards
+        {selectedNote && (
+          <SummaryCards
           selectedNote={selectedNote}
           summary={summary}
           insights={insights}
@@ -251,6 +375,7 @@ export const SummarizerPanel: React.FC = () => {
             onStartQuiz={startQuiz}
           />
         </SummaryCards>
+        )}
       </div>
       <QuizHistoryPanel
         selectedNote={selectedNote}
