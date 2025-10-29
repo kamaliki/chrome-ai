@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { ReactFlow, Node, Edge, Controls, Background, useNodesState, useEdgesState, Position } from '@xyflow/react';
+import { ReactFlow, Node, Edge, Controls, Background, useNodesState, useEdgesState, Position, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 import { Note } from '../../types/chrome-ai';
@@ -11,7 +11,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   const nodeWidth = 200;
   const nodeHeight = 60;
-  dagreGraph.setGraph({ rankdir: 'LR', ranksep: 100, nodesep: 60 });
+  dagreGraph.setGraph({ 
+    rankdir: 'LR', 
+    ranksep: 20, 
+    nodesep: 15,
+  });
 
   nodes.forEach(node => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -74,8 +78,7 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({
       current.notes.push(note);
     });
 
-    const levelSpacing = 240;
-    const nodeSpacing = 100;
+    const levelSpacing = 20;
     let globalY = 0;
 
     const countNotes = (node: any): number => {
@@ -103,7 +106,8 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({
           data: { label: key, count: totalNotes },
           sourcePosition: Position.Right,
           targetPosition: Position.Left,
-          parentNode: parentId || undefined,
+          parentId: parentId || undefined,   
+          //extent: parentId ? 'parent' : undefined
         });
 
         if (parentId) {
@@ -111,6 +115,10 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({
             id: `edge-${parentId}-${nodeIdStr}`,
             source: parentId,
             target: nodeIdStr,
+            sourceHandle: 'right',
+            targetHandle: 'left',
+            style: { stroke: '#64748b', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
           });
         }
 
@@ -135,13 +143,18 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({
               onSelect: onNoteSelect,
             },
             targetPosition: Position.Left,
-            parentNode: nodeIdStr,
+            parentId: nodeIdStr,  
+            //extent: 'parent',
           });
 
           edges.push({
             id: `edge-${nodeIdStr}-${noteNodeId}`,
             source: nodeIdStr,
             target: noteNodeId,
+            sourceHandle: 'right',
+            targetHandle: 'left',
+            style: { stroke: '#64748b', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
           });
         });
 
@@ -172,6 +185,9 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.1 }}
+        nodesDraggable
+        nodesConnectable
+        panOnDrag
       >
         <Controls />
         <Background gap={12} size={1} />
