@@ -19,6 +19,142 @@ interface QuizQuestion {
   correctAnswer: number;
 }
 
+interface TreeNodeProps {
+  name: string;
+  data: { notes: Note[]; children: any };
+  level: number;
+  selectedNote: Note | null;
+  onNoteSelect: (note: Note) => void;
+}
+
+const TreeNode: React.FC<TreeNodeProps> = ({ name, data, level, selectedNote, onNoteSelect }) => {
+  const [isExpanded, setIsExpanded] = useState(level < 2); // Auto-expand first 2 levels
+  const hasChildren = Object.keys(data.children).length > 0;
+  const hasNotes = data.notes.length > 0;
+  const totalNotes = data.notes.length + Object.values(data.children).reduce((sum: number, child: any) => {
+    return sum + child.notes.length + Object.values(child.children).reduce((childSum: number, grandChild: any) => childSum + grandChild.notes.length, 0);
+  }, 0);
+  
+  const getIndentColor = (level: number) => {
+    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
+    return colors[level % colors.length];
+  };
+  
+  return (
+    <div className="space-y-2">
+      {/* Node Header */}
+      <div 
+        className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors`}
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{ marginLeft: `${level * 20}px` }}
+      >
+        <div className="flex items-center gap-2">
+          {/* Tree connector */}
+          <div className={`w-3 h-3 rounded-full ${getIndentColor(level)}`}></div>
+          
+          {/* Expand/collapse icon */}
+          {(hasChildren || hasNotes) && (
+            <div className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+              ▶
+            </div>
+          )}
+          
+          {/* Node name */}
+          <span className={`font-medium ${level === 0 ? 'text-lg' : level === 1 ? 'text-base' : 'text-sm'}`}>
+            {name}
+          </span>
+          
+          {/* Note count */}
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+            {totalNotes} note{totalNotes !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+      
+      {/* Expanded content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            {/* Direct notes at this level */}
+            {hasNotes && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4" style={{ marginLeft: `${(level + 1) * 20}px` }}>
+                {data.notes.map(note => (
+                  <motion.div
+                    key={note.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <Card
+                      className={`cursor-pointer transition-all ${
+                        selectedNote?.id === note.id
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => onNoteSelect(note)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="text-sm font-medium truncate mb-1">
+                          {note.title || 'Untitled'}
+                        </div>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(note.updatedAt).toLocaleDateString()}
+                          </div>
+                          {note.summaries && note.summaries.length > 0 && (
+                            <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                              {note.summaries.length} summar{note.summaries.length > 1 ? 'ies' : 'y'}
+                            </div>
+                          )}
+                        </div>
+                        {note.tags && note.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {note.tags.slice(0, 3).map(tag => (
+                              <span key={tag} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                            {note.tags.length > 3 && (
+                              <span className="text-xs text-muted-foreground">+{note.tags.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+            
+            {/* Child nodes */}
+            {hasChildren && (
+              <div className="space-y-2">
+                {Object.entries(data.children)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([childName, childData]) => (
+                    <TreeNode
+                      key={childName}
+                      name={childName}
+                      data={childData as any}
+                      level={level + 1}
+                      selectedNote={selectedNote}
+                      onNoteSelect={onNoteSelect}
+                    />
+                  ))
+                }
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export const SummarizerPanel: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -196,15 +332,45 @@ export const SummarizerPanel: React.FC = () => {
     return <WelcomeScreen />;
   }
 
-  // Group notes by topic
-  const notesByTopic = notes.reduce((acc, note) => {
-    const topic = note.topic || 'Uncategorized';
-    if (!acc[topic]) acc[topic] = [];
-    acc[topic].push(note);
-    return acc;
-  }, {} as Record<string, Note[]>);
-
-  const topics = Object.keys(notesByTopic).sort();
+  // Create tree structure: topic -> tag1 -> tag2 -> ... -> note
+  const createTreeStructure = (notes: Note[]) => {
+    const tree: any = {};
+    
+    notes.forEach(note => {
+      const topic = note.topic || 'Uncategorized';
+      const tags = note.tags || [];
+      
+      // Initialize topic if not exists
+      if (!tree[topic]) {
+        tree[topic] = { notes: [], children: {} };
+      }
+      
+      // If no tags, add directly to topic
+      if (tags.length === 0) {
+        tree[topic].notes.push(note);
+        return;
+      }
+      
+      // Navigate through tag hierarchy
+      let current = tree[topic];
+      tags.forEach((tag, index) => {
+        if (!current.children[tag]) {
+          current.children[tag] = { notes: [], children: {} };
+        }
+        current = current.children[tag];
+        
+        // Add note to the last tag level
+        if (index === tags.length - 1) {
+          current.notes.push(note);
+        }
+      });
+    });
+    
+    return tree;
+  };
+  
+  const treeStructure = createTreeStructure(notes);
+  const topics = Object.keys(treeStructure).sort();
 
   return (
     <div className="h-full flex bg-background">
@@ -229,63 +395,17 @@ export const SummarizerPanel: React.FC = () => {
           </Button>
         </div>
 
-        {/* Topics and Notes */}
+        {/* Tree View Structure */}
         <div className="space-y-6">
           {topics.map(topic => (
-            <div key={topic}>
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-                {topic}
-                <span className="text-sm text-muted-foreground">({notesByTopic[topic].length} notes)</span>
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {notesByTopic[topic].map(note => (
-                  <motion.div
-                    key={note.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <Card
-                      className={`cursor-pointer transition-all ${
-                        selectedNote?.id === note.id
-                          ? 'border-primary bg-primary/5'
-                          : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => handleSummarize(note)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="text-sm font-medium truncate mb-1">
-                          {note.title || 'Untitled'}
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(note.updatedAt).toLocaleDateString()}
-                          </div>
-                          {note.summaries && note.summaries.length > 0 && (
-                            <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                              {note.summaries.length} summar{note.summaries.length > 1 ? 'ies' : 'y'}
-                            </div>
-                          )}
-                        </div>
-                        {note.tags && note.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {note.tags.slice(0, 3).map(tag => (
-                              <span key={tag} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                            {note.tags.length > 3 && (
-                              <span className="text-xs text-muted-foreground">+{note.tags.length - 3}</span>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+            <TreeNode 
+              key={topic}
+              name={topic}
+              data={treeStructure[topic]}
+              level={0}
+              selectedNote={selectedNote}
+              onNoteSelect={handleSummarize}
+            />
           ))}
         </div>
       </div>
