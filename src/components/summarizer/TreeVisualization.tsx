@@ -15,6 +15,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     rankdir: 'LR', 
     ranksep: 20, 
     nodesep: 15,
+    // marginx: 50,         // adds some left margin
+    // marginy: 50,
   });
 
   nodes.forEach(node => {
