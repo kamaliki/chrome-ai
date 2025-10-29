@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Languages, Sparkles, Image, FileText, Volume2, VolumeX, Trash2, Clock, Plus, List, ChevronDown, RotateCcw } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { Note, AIActivity } from '../types/chrome-ai';
 import { saveNote, getNotes, deleteNote } from '../utils/storage';
 import { useAI } from '../hooks/useAI';
-import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EditorWelcome } from './EditorWelcome';
 import { ModelLoadingAnimation } from './ModelLoadingAnimation';
-import { cleanOCRText, formatMarkdown } from '../utils/textFormatter';
+import { cleanOCRText } from '../utils/textFormatter';
+import { NotesSidebar } from './editor/NotesSidebar';
+import { TopicTagsHeader } from './editor/TopicTagsHeader';
+import { EditorToolbar } from './editor/EditorToolbar';
+import { AIActivityPanel } from './editor/AIActivityPanel';
+import { MobileNotesPanel } from './editor/MobileNotesPanel';
 
 // Convert markdown to plain text for textarea display
 const markdownToPlainText = (markdown: string): string => {
@@ -270,6 +271,15 @@ export const Editor: React.FC = () => {
     setIsWritingNew(true);
   };
 
+  const handleNoteSelect = (note: Note) => {
+    setCurrentNote(note);
+    setContent(note.content);
+    setTitle(note.title || '');
+    setTopic(note.topic || '');
+    setTags(note.tags?.join(', ') || '');
+    setUploadedImages(note.images || []);
+  };
+
   const handleDeleteNote = async (noteId: string) => {
     await deleteNote(noteId);
     
@@ -353,240 +363,58 @@ export const Editor: React.FC = () => {
         />
       )}
       
-      {/* Notes Sidebar */}
-      <div className={`
-        w-64 h-full bg-muted/50 border-r p-2 md:p-4 overflow-y-auto
-        fixed md:relative z-50 md:z-auto
-        transform transition-transform duration-200 ease-in-out
-        ${showAiPanel ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        hidden md:block
-      `}>
-        <Button
-          onClick={createNewNote}
-          className="w-full mb-4"
-        >
-          New Note
-        </Button>
-        
-        <div className="space-y-2">
-          {notes.map((note) => (
-            <motion.div
-              key={note.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card 
-                className={`transition-colors ${
-                  currentNote?.id === note.id
-                    ? 'bg-primary/10 border-primary'
-                    : 'hover:bg-muted/50'
-                }`}
-              >
-                <CardContent className="p-3">
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setCurrentNote(note);
-                      setContent(note.content);
-                      setTitle(note.title || '');
-                      setTopic(note.topic || '');
-                      setTags(note.tags?.join(', ') || '');
-                      setUploadedImages(note.images || []);
-                    }}
-                  >
-                    <div className="text-sm font-medium truncate">
-                      {note.title || 'Untitled'}
-                    </div>
-                    {note.topic && (
-                      <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">
-                        {note.topic}
-                      </div>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(note.updatedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('Delete this note?')) {
-                        handleDeleteNote(note.id);
-                      }
-                    }}
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 w-full text-destructive hover:text-destructive"
-                  >
-                    <Trash2 size={14} />
-                    Delete
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+      <NotesSidebar
+        notes={notes}
+        currentNote={currentNote}
+        onNoteSelect={handleNoteSelect}
+        onCreateNew={createNewNote}
+        onDeleteNote={handleDeleteNote}
+        showAiPanel={showAiPanel}
+      />
 
       {/* Editor */}
       <div className="flex-1 h-screen flex flex-col md:ml-0">
-        {/* Topic and Tags */}
-        <div className="border-b p-2 md:p-4 flex items-center gap-2 flex-shrink-0 overflow-x-auto">
-          <Input
-            placeholder="Topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="w-32 md:w-48 text-sm"
-            list="existing-topics"
-          />
-          <datalist id="existing-topics">
-            {existingTopics.map((existingTopic) => (
-              <option key={existingTopic} value={existingTopic} />
-            ))}
-          </datalist>
-          
-          <Input
-            placeholder="Tags"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            className="w-32 md:w-48 text-sm"
-            list="existing-tags"
-          />
-          <datalist id="existing-tags">
-            {existingTags.map((tag) => (
-              <option key={tag} value={tag} />
-            ))}
-          </datalist>
-          
-          {detectedLanguage && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Languages size={14} />
-              <span>{detectedLanguage.language.toUpperCase()}</span>
-              <span className="text-green-600">({Math.round(detectedLanguage.confidence * 100)}%)</span>
-            </div>
-          )}
-        </div>
+        <TopicTagsHeader
+          topic={topic}
+          tags={tags}
+          existingTopics={existingTopics}
+          existingTags={existingTags}
+          detectedLanguage={detectedLanguage}
+          onTopicChange={setTopic}
+          onTagsChange={setTags}
+        />
         
-        {/* Toolbar */}
-        <div className="border-b p-2 md:p-4 flex items-center gap-1 md:gap-2 flex-shrink-0 flex-wrap">
-          <Button
-            onClick={handleSave}
-            variant="default"
-            size="sm"
-            className="gap-1 md:gap-2"
-            disabled={!content.trim() || !title.trim() || !topic.trim() || !tags.trim()}
-            title={!content.trim() || !title.trim() || !topic.trim() || !tags.trim() ? 
-              `Missing: ${[!title.trim() && 'Title', !topic.trim() && 'Topic', !tags.trim() && 'Tags', !content.trim() && 'Content'].filter(Boolean).join(', ')}` : 
-              'Save note'}
-          >
-            <Save size={14} />
-            <span className="hidden sm:inline">Save</span>
-          </Button>
-          
-          {/* Multimodal Input */}
-          <div className="flex items-center gap-2">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              id="image-upload"
-            />
-            <Button
-              onClick={() => document.getElementById('image-upload')?.click()}
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              disabled={isLoading}
-            >
-              <Image size={14} />
-              <span className="hidden sm:inline">Image</span>
-            </Button>
-            
-
-            <Button
-              onClick={() => {
-                if (isSpeaking) {
-                  window.speechSynthesis.cancel();
-                  setIsSpeaking(false);
-                } else {
-                  const textToSpeak = selectedText || content || 'No content to read';
-                  // Auto-detect language and speak accordingly
-                  const isSpanish = /[ñáéíóúü]/i.test(textToSpeak);
-                  const isJapanese = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/i.test(textToSpeak);
-                  const detectedLang = isJapanese ? 'ja' : isSpanish ? 'es' : 'en';
-                  speakResponseInLanguage(textToSpeak, detectedLang);
-                  setIsSpeaking(true);
-                }
-              }}
-              variant="outline"
-              size="sm"
-              className="gap-1"
-            >
-              {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
-              <span className="hidden sm:inline">{isSpeaking ? 'Stop' : 'Speak'}</span>
-            </Button>
-            
-            <Button
-              onClick={() => setShowAiPanel(!showAiPanel)}
-              variant={showAiPanel ? "default" : "outline"}
-              size="sm"
-              className="gap-1"
-            >
-              <Clock size={14} />
-              <span className="hidden sm:inline">AI History</span>
-            </Button>
-          </div>
-          
-          {selectedText && (
-            <>
-              <Button
-                onClick={handleRewrite}
-                disabled={isLoading}
-                variant="secondary"
-                size="sm"
-                className="gap-1"
-              >
-                <Sparkles size={14} />
-                <span className="hidden sm:inline">Rewrite</span>
-              </Button>
-              
-              <Button
-                onClick={handleCleanText}
-                disabled={isLoading}
-                variant="outline"
-                size="sm"
-                className="gap-1"
-              >
-                <FileText size={14} />
-                <span className="hidden sm:inline">Clean</span>
-              </Button>
-              
-              <div className="flex items-center gap-2">
-                <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                  <SelectTrigger className="w-16 md:w-24 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="es">🇪🇸 ES</SelectItem>
-                    <SelectItem value="en">🇺🇸 EN</SelectItem>
-                    <SelectItem value="ja">🇯🇵 JA</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Button
-                  onClick={handleTranslate}
-                  disabled={isLoading}
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                >
-                  <Languages size={14} />
-                  <span className="hidden sm:inline">Translate</span>
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
+        <EditorToolbar
+          content={content}
+          title={title}
+          topic={topic}
+          tags={tags}
+          selectedText={selectedText}
+          targetLanguage={targetLanguage}
+          isSpeaking={isSpeaking}
+          isLoading={isLoading}
+          showAiPanel={showAiPanel}
+          onSave={handleSave}
+          onImageUpload={handleImageUpload}
+          onSpeak={() => {
+            if (isSpeaking) {
+              window.speechSynthesis.cancel();
+              setIsSpeaking(false);
+            } else {
+              const textToSpeak = selectedText || content || 'No content to read';
+              const isSpanish = /[ñáéíóúü]/i.test(textToSpeak);
+              const isJapanese = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/i.test(textToSpeak);
+              const detectedLang = isJapanese ? 'ja' : isSpanish ? 'es' : 'en';
+              speakResponseInLanguage(textToSpeak, detectedLang);
+              setIsSpeaking(true);
+            }
+          }}
+          onToggleAiPanel={() => setShowAiPanel(!showAiPanel)}
+          onRewrite={handleRewrite}
+          onCleanText={handleCleanText}
+          onTranslate={handleTranslate}
+          onLanguageChange={setTargetLanguage}
+        />
 
         {/* Content Area */}
         <div className="flex-1 flex h-0 flex-col md:flex-row">
@@ -636,154 +464,22 @@ export const Editor: React.FC = () => {
             )}
           </div>
           
-          {/* AI Activity Panel */}
-          {showAiPanel && (
-            <div className={`
-              w-full md:w-80 border-t md:border-t-0 md:border-l bg-muted/30 flex flex-col
-              fixed md:relative bottom-0 md:bottom-auto left-0 md:left-auto
-              h-1/2 md:h-full z-50 md:z-auto
-            `}>
-              <div className="p-4 border-b bg-muted/20 flex-shrink-0">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Clock size={16} />
-                  AI Activity History
-                </h3>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-4">
-                {aiActivities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No AI activities yet. Try rewriting or translating some text!</p>
-                ) : (
-                  <div className="space-y-4">
-                  {aiActivities.map((activity) => (
-                    <Card key={activity.id} className="p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                          {activity.action.toUpperCase()}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <strong>Original:</strong>
-                          <p className="text-muted-foreground bg-muted/50 p-2 rounded text-xs mt-1">
-                            {activity.originalText}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <strong>Result:</strong>
-                            <Button
-                              onClick={() => {
-                                const plainText = markdownToPlainText(activity.resultText);
-                                setContent(plainText);
-                              }}
-                              variant="outline"
-                              size="sm"
-                              className="gap-1 h-6 px-2 text-xs"
-                            >
-                              <RotateCcw size={12} />
-                              Recover
-                            </Button>
-                          </div>
-                          <div className="bg-green-50 dark:bg-green-900/30 text-green-900 dark:text-green-100 p-2 rounded text-xs mt-1" dangerouslySetInnerHTML={{ __html: formatMarkdown(activity.resultText) }} />
-                        </div>
-                        
-                        {activity.explanation && (
-                          <div>
-                            <strong>Changes:</strong>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {activity.explanation}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <AIActivityPanel
+            aiActivities={aiActivities}
+            showAiPanel={showAiPanel}
+            onRecoverText={setContent}
+          />
         </div>
       </div>
       
-      {/* Mobile Floating Action Button */}
-      <div className="md:hidden fixed bottom-4 right-4 z-50">
-        <AnimatePresence>
-          {showMobileNotes && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.8 }}
-              className="mb-4 bg-card border rounded-lg shadow-lg max-h-80 w-64 overflow-hidden"
-            >
-              <div className="p-3 border-b bg-muted/20">
-                <h3 className="font-semibold text-sm">Notes</h3>
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                <Button
-                  onClick={() => {
-                    createNewNote();
-                    setShowMobileNotes(false);
-                  }}
-                  className="w-full m-2 gap-2"
-                  size="sm"
-                >
-                  <Plus size={16} />
-                  New Note
-                </Button>
-                
-                <div className="px-2 pb-2 space-y-1">
-                  {notes.map((note) => (
-                    <div
-                      key={note.id}
-                      className={`p-2 rounded cursor-pointer text-sm transition-colors ${
-                        currentNote?.id === note.id
-                          ? 'bg-primary/10 border border-primary'
-                          : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => {
-                        setCurrentNote(note);
-                        setContent(note.content);
-                        setTitle(note.title || '');
-                        setTopic(note.topic || '');
-                        setTags(note.tags?.join(', ') || '');
-                        setUploadedImages(note.images || []);
-                        setShowMobileNotes(false);
-                      }}
-                    >
-                      <div className="font-medium truncate">
-                        {note.title || 'Untitled'}
-                      </div>
-                      {note.topic && (
-                        <div className="text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mt-1 inline-block">
-                          {note.topic}
-                        </div>
-                      )}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {new Date(note.updatedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        <Button
-          onClick={() => setShowMobileNotes(!showMobileNotes)}
-          size="lg"
-          className="rounded-full w-14 h-14 shadow-lg"
-        >
-          {showMobileNotes ? <ChevronDown size={24} /> : <List size={24} />}
-        </Button>
-      </div>
+      <MobileNotesPanel
+        notes={notes}
+        currentNote={currentNote}
+        showMobileNotes={showMobileNotes}
+        onToggle={() => setShowMobileNotes(!showMobileNotes)}
+        onNoteSelect={handleNoteSelect}
+        onCreateNew={createNewNote}
+      />
     </div>
   );
 };

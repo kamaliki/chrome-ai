@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Loader2 } from 'lucide-react';
 import { useAI } from '../hooks/useAI';
 import { getNotes, saveNote } from '../utils/storage';
 import { Note } from '../types/chrome-ai';
@@ -11,6 +10,7 @@ import { QuizDialog } from './summarizer/QuizDialog';
 import { QuizHistoryPanel } from './summarizer/QuizHistoryPanel';
 import { ProgressChart } from './summarizer/ProgressChart';
 import { QuizReviewDialog } from './summarizer/QuizReviewDialog';
+import { FileText, Loader2 } from 'lucide-react';
 
 interface QuizQuestion {
   id: string;
@@ -255,6 +255,15 @@ export const SummarizerPanel: React.FC = () => {
                   <h3 className="text-lg font-semibold">{selectedTopic}</h3>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    onClick={summarizeAllNotes}
+                    disabled={isLoading}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                    Summarize Topic
+                  </Button>
                   <Button
                     variant={viewMode === 'simple' ? 'default' : 'outline'}
                     size="sm"
