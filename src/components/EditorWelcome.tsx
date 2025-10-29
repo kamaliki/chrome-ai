@@ -24,6 +24,16 @@ export const EditorWelcome: React.FC = () => {
       icon: <Sparkles className="text-orange-500" size={20} />,
       title: "Text Enhancement",
       description: "Improve clarity and fix formatting"
+    },
+    {
+      icon: <Lightbulb className="text-yellow-500" size={20} />,
+      title: "AI Quizzes",
+      description: "Test understanding with AI-generated questions"
+    },
+    {
+      icon: <FileText className="text-indigo-500" size={20} />,
+      title: "Tree Organization",
+      description: "Visualize notes in hierarchical structure"
     }
   ];
 
@@ -67,7 +77,7 @@ export const EditorWelcome: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="grid grid-cols-2 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8"
         >
           {features.map((feature, index) => (
             <motion.div
@@ -95,11 +105,11 @@ export const EditorWelcome: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <Lightbulb size={16} className="text-yellow-500" />
-            <span>Select text to see AI options</span>
+            <span>Click ? for organization tips</span>
           </div>
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-blue-500" />
-            <span>Auto-save enabled</span>
+            <span>Select text for AI options</span>
           </div>
         </motion.div>
       </motion.div>

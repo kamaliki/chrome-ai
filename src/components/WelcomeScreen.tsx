@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, FileText, Languages, Camera, Target, CheckCircle, Sparkles } from 'lucide-react';
+import { Brain, FileText, Languages, Camera, Target, CheckCircle, Sparkles, HelpCircle, GitBranch } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const WelcomeScreen: React.FC = () => {
@@ -34,6 +34,18 @@ export const WelcomeScreen: React.FC = () => {
       title: "Smart Translation",
       description: "Multi-language support with translation history and auto-detection",
       gradient: "from-pink-500/10 to-pink-600/10"
+    },
+    {
+      icon: <GitBranch className="text-indigo-500" size={24} />,
+      title: "Tree Visualization",
+      description: "Hierarchical view of notes organized by topics and tags",
+      gradient: "from-indigo-500/10 to-indigo-600/10"
+    },
+    {
+      icon: <HelpCircle className="text-cyan-500" size={24} />,
+      title: "Organization Tips",
+      description: "Collapsible help system for better note structure",
+      gradient: "from-cyan-500/10 to-cyan-600/10"
     },
     {
       icon: <Target className="text-red-500" size={24} />,
@@ -146,6 +158,10 @@ export const WelcomeScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span>Track your learning progress over time</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+            <span>Visualize notes in hierarchical tree structure</span>
           </div>
         </div>
       </motion.div>
